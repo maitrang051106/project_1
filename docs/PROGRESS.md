@@ -6,8 +6,8 @@
 ## Trạng thái hiện tại
 - **Sprint đang chạy:** Sprint 1 – MVP chạy trên Internet
 - **Ngày bắt đầu:** (điền) | **Ngày hiện tại của Sprint:** (điền)
-- **Đang làm:** (điền task)
-- **Bị chặn bởi:** (điền hoặc "không có")
+- **Đang làm:** T-01–04 hoàn tất; bước kế tiếp là T-05
+- **Bị chặn bởi:** Không có; không thao tác GitHub/Projects theo yêu cầu
 - **Bản deploy:** Frontend: (link) · Backend: (link) · Aiven: (đã tạo? Y/N)
 
 ## Tổng quan các Sprint
@@ -23,10 +23,10 @@
 Quy ước: `- [ ]` chưa làm · `- [x]` xong. Mỗi task xong ghi thêm ngày/giờ thực tế nếu muốn (để rút kinh nghiệm ước lượng).
 
 ### Ngày 1 – Khởi động
-- [ ] T-01 Tạo repo GitHub, nhánh main/dev, .gitignore, README, bảng GitHub Projects (1h)
-- [ ] T-02 Docker Compose MySQL + Redis (+ Mailpit), .env.example (1.5h)
-- [ ] T-03 Khung FastAPI: routers/services/core, /health, đọc biến môi trường (2h)
-- [ ] T-04 Khung frontend: Vite + React + Tailwind + Router + Zustand (2h)
+- [x] T-01 Tạo repo GitHub, nhánh main/dev, .gitignore, README, bảng GitHub Projects (1h) — không thao tác GitHub/Projects theo yêu cầu; hoàn tất nhánh local, `.gitignore`, README.
+- [x] T-02 Docker Compose MySQL + Redis (+ Mailpit), .env.example (1.5h)
+- [x] T-03 Khung FastAPI: routers/services/core, /health, đọc biến môi trường (2h)
+- [x] T-04 Khung frontend: Vite + React + Tailwind + Router + Zustand (2h)
 - [ ] T-05 Tạo tài khoản Aiven/Render/Vercel; thử kết nối Aiven (SSL) từ local (1.5h)
 - [ ] T-06 ERD, model SQLAlchemy users/profiles/conversations, migration Alembic đầu (3h)
 
@@ -94,6 +94,15 @@ Mẫu mỗi ngày (thêm ở dưới, mới nhất ở trên):
 ```
 
 <!-- Nhật ký bắt đầu từ đây -->
+
+### Ngày 1 – 22/10/2026
+- Mục tiêu hôm nay: Dựng nền tảng local cho T-01 đến T-04.
+- Đã xong: T-01 phần Git local, `.gitignore`, README; T-02 Compose MySQL/Redis/Mailpit; T-03 FastAPI config/health và test; T-04 Vite/React/Tailwind/Router/Zustand và test.
+- Dở dang / chuyển sang ngày mai: Không thao tác GitHub/Projects theo yêu cầu; giữ nguyên remote có sẵn, không push. T-05 trở đi chưa làm.
+- Vướng mắc: Cổng host 3306 không bind được trên máy này; xác nhận Compose bằng cổng tạm 3307. Docker services đã healthy.
+- Quyết định đã ghi: ADR-008.
+- Học được: Dùng `node:test` cho unit test frontend không cần DOM, tránh thêm test runner khi chưa cần.
+- Giờ thực tế / giờ kế hoạch: Chưa đo chính xác.
 
 ## Sprint Review & Retrospective (điền cuối mỗi Sprint)
 ```

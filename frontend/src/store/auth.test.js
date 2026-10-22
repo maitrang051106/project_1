@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { useAuthStore } from "./auth";
+import assert from "node:assert/strict";
+import { beforeEach, describe, it } from "node:test";
+import { useAuthStore } from "./auth.js";
 
 describe("auth store", () => {
   beforeEach(() => {
@@ -11,7 +12,7 @@ describe("auth store", () => {
 
     useAuthStore.getState().setUser(user);
 
-    expect(useAuthStore.getState().user).toEqual(user);
+    assert.deepEqual(useAuthStore.getState().user, user);
   });
 
   it("clears the current user", () => {
@@ -19,6 +20,6 @@ describe("auth store", () => {
 
     useAuthStore.getState().clearUser();
 
-    expect(useAuthStore.getState().user).toBeNull();
+    assert.equal(useAuthStore.getState().user, null);
   });
 });

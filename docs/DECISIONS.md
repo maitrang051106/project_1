@@ -53,4 +53,11 @@ Mẫu:
 - Lý do: Có gói miễn phí/giá thấp, dễ dùng.
 - Đánh đổi: Render free tự tắt khi nhàn rỗi (khởi động lại mất khoảng 1 phút) và ổ đĩa tạm thời; Aiven free có giới hạn tài nguyên; Redis cần dịch vụ riêng. Kiểm tra giới hạn hiện tại trước khi dựa vào.
 
-<!-- Thêm ADR-008, ADR-009… bên dưới -->
+## ADR-008: Dùng Node.js test runner tích hợp cho frontend
+- Ngày: 2026-10-22 | Trạng thái: Chấp nhận
+- Bối cảnh: T-04 cần test cho Zustand store; các test hiện tại không cần DOM hay mock trình duyệt.
+- Lựa chọn: Dùng `node:test` và `node:assert/strict` có sẵn, chạy qua `npm test`.
+- Lý do: Đủ cho test đơn vị hiện tại, tránh thêm test runner bên thứ ba; npm audit sau khi bỏ Vitest báo không có lỗ hổng.
+- Đánh đổi / rủi ro: Test giao diện React cần công cụ DOM/browser riêng nếu được bổ sung ở task sau.
+
+<!-- Thêm ADR-009, ADR-010… bên dưới -->

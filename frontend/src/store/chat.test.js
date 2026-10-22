@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { useChatStore } from "./chat";
+import assert from "node:assert/strict";
+import { beforeEach, describe, it } from "node:test";
+import { useChatStore } from "./chat.js";
 
 describe("chat store", () => {
   beforeEach(() => {
@@ -9,6 +10,6 @@ describe("chat store", () => {
   it("stores the active room id in memory", () => {
     useChatStore.getState().setRoomId("room-123");
 
-    expect(useChatStore.getState().roomId).toBe("room-123");
+    assert.equal(useChatStore.getState().roomId, "room-123");
   });
 });

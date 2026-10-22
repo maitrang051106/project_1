@@ -18,7 +18,9 @@ docker compose ps
 ```
 
 Mailpit có giao diện tại <http://localhost:8025>. Các cổng dịch vụ chỉ bind vào
-loopback của máy local.
+loopback của máy local. Nếu cổng MySQL 3306 đang được dùng, đổi `MYSQL_PORT`
+trong `.env` (ví dụ `3307`) và cập nhật cổng tương ứng trong
+`backend/.env` ở `DATABASE_URL`.
 
 ### 2. Chạy backend
 
