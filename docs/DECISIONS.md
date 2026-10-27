@@ -1,63 +1,96 @@
-# Nhật ký quyết định (ADR)
+# Quyết định kỹ thuật
 
-> Mỗi quyết định kỹ thuật quan trọng ghi một mục. Không xóa mục cũ; nếu đổi ý, thêm mục mới và đánh dấu mục cũ là "Thay thế bởi ADR-xxx".
-
-Mẫu:
-```
-## ADR-00X: <Tiêu đề>
-- Ngày: yyyy-mm-dd | Trạng thái: Đề xuất / Chấp nhận / Thay thế bởi ADR-xxx
-- Bối cảnh: …
-- Lựa chọn: …
-- Lý do: …
-- Đánh đổi / rủi ro: …
-```
+Giữ ADR cũ để lưu lịch sử; quyết định mới hơn ghi rõ mục nào được thay thế.
 
 ## ADR-001: Chỉ dùng Python (FastAPI) cho backend
 - Trạng thái: Chấp nhận
-- Bối cảnh: Đề cương ban đầu dùng cả Python và Node.js.
-- Lựa chọn: Chỉ FastAPI.
-- Lý do: Giảm khối lượng học cho người mới; FastAPI hỗ trợ WebSocket/async và cùng hệ sinh thái AI/ML (NumPy, embedding, RAG).
-- Đánh đổi: Không tận dụng Socket.IO của Node.js; dùng WebSocket gốc + Redis Pub/Sub.
+- Chọn FastAPI thay vì backend Node.js để giảm số công nghệ và dùng chung hệ
+  sinh thái Python. Dùng WebSocket gốc và Redis Pub/Sub.
 
 ## ADR-002: Đăng nhập bằng email @hust.edu.vn + OTP, bỏ Microsoft Entra ID
 - Trạng thái: Chấp nhận
-- Bối cảnh: Đăng ký ứng dụng trong tenant Entra ID của trường cần quyền admin nhà trường.
-- Lựa chọn: Gửi OTP 6 số tới email trường; không dùng mật khẩu.
-- Lý do: Không phụ thuộc nhà trường; đơn giản; chứng minh sở hữu hộp thư HUST.
-- Đánh đổi: OTP chỉ chứng minh quyền sở hữu hộp thư, **không** xác thực họ tên. Identity Reveal (Sprint 4) chỉ hiển thị email đã xác thực (và MSSV nếu trích được từ định dạng email, cần kiểm tra thực tế). Email có thể vào thư rác; cần dịch vụ gửi email đáng tin cậy.
+- Dùng OTP 6 số qua email trường, không dùng Entra ID/mật khẩu. OTP chứng minh
+  quyền truy cập hộp thư, không xác minh họ tên; email có thể vào thư rác.
 
 ## ADR-003: OTP lưu ở Redis dưới dạng băm HMAC
 - Trạng thái: Chấp nhận
-- Lý do: TTL tự hết hạn; nếu Redis bị lộ vẫn không đọc được OTP đang hiệu lực. So sánh bằng `hmac.compare_digest`.
-- Đánh đổi: Cần giữ bí mật `OTP_SECRET`; đổi khóa sẽ làm mất hiệu lực OTP đang chờ.
+- Lưu HMAC trong Redis với TTL; so sánh bằng `hmac.compare_digest`. Bảo vệ
+  `OTP_SECRET`; đổi khóa làm mất hiệu lực OTP đang chờ.
 
-## ADR-004: Bỏ kiểm duyệt AI từng tin nhắn
-- Trạng thái: Chấp nhận
-- Bối cảnh: Đề cương ban đầu dùng mô hình phân loại chấm xác suất vi phạm cho mọi tin nhắn.
-- Lựa chọn: Không quét từng tin. Trust Score dựa trên báo cáo (Report) do admin xác nhận; có shadowban (<50) và khóa (=0).
-- Lý do: Giảm độ phức tạp, độ trễ, chi phí và chia sẻ dữ liệu với bên thứ ba.
-- Đánh đổi: Lừa đảo/quấy rối chỉ bị xử lý sau khi có báo cáo. Giảm thiểu: nút Report dễ thấy, chặn người dùng, banner cảnh báo an toàn, rate limit. Có thể bổ sung kiểm duyệt tự động sau.
+## ADR-004: Không kiểm duyệt AI từng tin nhắn
+- Trạng thái: Chấp nhận; cách xử lý report/trust được cập nhật bởi ADR-009/012
+- Không quét từng tin để giảm độ trễ, chi phí và chia sẻ dữ liệu. Rủi ro: hành
+  vi xấu chỉ được xử lý sau report; hỗ trợ report, block và rate limit.
 
 ## ADR-005: Không lưu nội dung tin nhắn
-- Trạng thái: Chấp nhận
-- Lý do: Quyền riêng tư; giảm rủi ro rò rỉ dữ liệu. Tin nhắn chỉ đi qua Redis Pub/Sub.
-- Đánh đổi: Không có lịch sử chat; báo cáo vi phạm dựa vào mô tả của người báo cáo (có thể xem lại sau nếu cần lưu có thời hạn).
+- Trạng thái: Thay thế một phần bởi ADR-009
+- Không lưu lịch sử chat để bảo vệ riêng tư. Bản evidence mã hóa, có mục đích
+  và TTL giới hạn được cho phép theo ADR-009.
 
 ## ADR-006: Ghép cặp bằng Cosine Similarity trên vector multi-hot + ghép tham lam
-- Trạng thái: Chấp nhận
-- Lý do: Đơn giản, đủ nhanh cho vài nghìn người dùng bằng NumPy; không cần vector DB.
-- Đánh đổi: Ghép tham lam không tối ưu toàn cục; ngưỡng cao thì chờ lâu, ngưỡng thấp thì kém phù hợp (cần đo và chỉnh).
+- Trạng thái: Thay thế bởi ADR-010
+- Phương án ban đầu: cosine trên vector multi-hot và greedy matching. Đã thay
+  bằng hard filters + weighted score theo ADR-010/013.
 
 ## ADR-007: Hạ tầng thử nghiệm Render + Vercel + Aiven
 - Trạng thái: Chấp nhận (cho bản thử)
-- Lý do: Có gói miễn phí/giá thấp, dễ dùng.
-- Đánh đổi: Render free tự tắt khi nhàn rỗi (khởi động lại mất khoảng 1 phút) và ổ đĩa tạm thời; Aiven free có giới hạn tài nguyên; Redis cần dịch vụ riêng. Kiểm tra giới hạn hiện tại trước khi dựa vào.
+- Dùng Render, Vercel, Aiven cho bản thử nghiệm. Giới hạn dịch vụ thay đổi;
+  kiểm tra trước khi triển khai.
 
 ## ADR-008: Dùng Node.js test runner tích hợp cho frontend
 - Ngày: 2026-10-22 | Trạng thái: Chấp nhận
-- Bối cảnh: T-04 cần test cho Zustand store; các test hiện tại không cần DOM hay mock trình duyệt.
-- Lựa chọn: Dùng `node:test` và `node:assert/strict` có sẵn, chạy qua `npm test`.
-- Lý do: Đủ cho test đơn vị hiện tại, tránh thêm test runner bên thứ ba; npm audit sau khi bỏ Vitest báo không có lỗ hổng.
-- Đánh đổi / rủi ro: Test giao diện React cần công cụ DOM/browser riêng nếu được bổ sung ở task sau.
+- Dùng `node:test`/`node:assert` cho unit test store, tránh dependency test
+  runner; test giao diện cần công cụ DOM/browser riêng nếu phát sinh.
 
-<!-- Thêm ADR-009, ADR-010… bên dưới -->
+## ADR-009: Chỉ phân loại nội dung khi có report, evidence tạm thời
+- Ngày: 2026-10-23 | Trạng thái: Chấp nhận
+- Participant được report người còn lại trong 30 phút sau chat. Redis giữ buffer
+  trượt 30 phút; report hợp lệ snapshot evidence mã hóa vào DB, xóa sau 30 phút.
+  Chưa chọn classifier. Redis TTL không dọn DB evidence; cần job xóa và xử lý
+  lỗi snapshot. Không log nội dung chat.
+
+## ADR-012: Chốt wildcard, quota chat và xử lý report giai đoạn đầu
+- Ngày: 2026-10-23 | Trạng thái: Thiết kế chấp nhận; mã/quota tại ADR-013,
+  catalog tại ADR-014
+- Một phòng hoạt động/user, không cooldown; mỗi bên nhận một lượt khi phòng
+  tạo thành công. Quota/ngày VN: score `>=90` không giới hạn, `70-89` tối đa
+  5, `50-69` tối đa 3, `1-49` tối đa 1; `<=0` bị ban. Không shadowban.
+- Redis buffer mỗi phòng tối đa 1 MiB, bỏ tin cũ; report hợp lệ lưu snapshot
+  mã hóa 30 phút. Ban đầu chỉ thu thập; placeholder `50` không đổi trust.
+- Rủi ro: buffer/TTL có thể khiến evidence thiếu; cần xử lý lỗi snapshot và
+  dọn evidence khỏi DB.
+
+## ADR-013: Mã đáp án và ưu tiên tính cách; tính quota lúc bắt đầu chat
+- Ngày: 2026-10-23 | Trạng thái: Chấp nhận cho thiết kế
+- Mã chuỗi: Q1/Q3 `0`–`3`, Q2 `0`–`2`, Q4-Q6 `0`–`2` + wildcard `3`;
+  questionnaire version `3`.
+- Personality thay cosine bằng ưu tiên hai chiều: code `0/1` xếp ứng viên
+  `0→1→2→3`; code `2/3` xếp `3→2→1→0`. Tổng là weighted score.
+- Ghi lượt quota cho mỗi bên khi tạo conversation, theo `started_at` và ngày
+  `Asia/Ho_Chi_Minh`.
+
+## ADR-014: Dùng catalog HUST tuyển sinh 2026 đã lưu trong repository
+- Ngày: 2026-10-23 | Trạng thái: Chấp nhận cho thiết kế
+- CSV [68 chương trình](../db/seed/hust-68-nganh-2026.csv) là nguồn chuẩn;
+  script kiểm tra dữ liệu và tạo CSV đơn vị. Không crawl khi seed.
+- Giữ mã chương trình làm `major_code`; `faculty_code` là slug nội bộ, không
+  phải mã chính thức. Metadata không tham gia matching.
+- Catalog tổng hợp; đối chiếu TROY-IT, ED2/ED3/ED5, MS2, MI-E22 và chỉ tiêu
+  BF-E12 trước production.
+
+## ADR-015: Xử lý lỗi snapshot evidence khi report
+- Ngày: 2026-10-23 | Trạng thái: Chấp nhận cho thiết kế
+- Nếu snapshot evidence thất bại (chưa lưu bền vững vào DB), backend không xác
+  nhận report thành công mà trả về lỗi; UI hiển thị thông báo "Gửi report không
+  thành công".
+
+
+## ADR-016: Đơn giản hóa hồ sơ và chuyển toàn bộ sang 3 bộ lọc cứng hai chiều
+- Ngày: 2026-10-27 | Trạng thái: Chấp nhận
+- Xóa bỏ toàn bộ các câu hỏi tính cách, mục tiêu, vector cosine cũ.
+- Khi đăng nhập: bắt buộc khai báo 3 thông tin: `gender` (nam/nữ), `major_code`/`faculty_code` (thuộc 68 ngành HUST), `cohort` (khóa K63 đến K71).
+- Khi ghép cặp: chỉ áp dụng 3 ràng buộc hai chiều (Two-way Hard Filters):
+  1. Giới tính: nam / nữ / bất kì
+  2. Ngành/Trường: cùng ngành / cùng trường khác ngành / khác trường / bất kì
+  3. Khóa: khóa trên / khóa dưới / cùng khóa / bất kì
+- Cả hai người phải cùng thỏa mãn ràng buộc của nhau. Chi tiết tại `docs/QUESTIONNAIRE.md`.

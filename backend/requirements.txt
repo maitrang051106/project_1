@@ -3,3 +3,8 @@ httpx==0.28.1
 pydantic-settings==2.8.1
 pytest==8.3.5
 uvicorn==0.34.0
+SQLAlchemy==2.0.40
+alembic==1.15.2
+aiomysql==0.2.0
+PyJWT>=2.8.0
+redis>=5.0.0

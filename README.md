@@ -1,82 +1,49 @@
 # HUST Chatbox
 
-Nền tảng chat ẩn danh dành cho sinh viên Đại học Bách khoa Hà Nội. Dự án dùng
-FastAPI cho backend, React + Vite cho frontend, MySQL và Redis cho dữ liệu,
-Mailpit để xem email trong môi trường phát triển.
+Chat ẩn danh 1–1 cho sinh viên HUST. Stack: FastAPI, React/Vite, MySQL và
+Redis; Mailpit dùng để nhận email khi phát triển local.
 
 ## Chạy local
 
-### 1. Cấu hình và khởi động dịch vụ
-
-Sao chép `.env.example` thành `.env` ở thư mục gốc và thay các mật khẩu mẫu
-bằng giá trị riêng cho máy local. Sau đó khởi động MySQL, Redis và Mailpit:
+Tạo `.env` từ mẫu ở thư mục gốc và trong `backend/`, `frontend/`; thay các giá
+trị mẫu bằng thông tin local. Không commit các file `.env`.
 
 ```powershell
-Copy-Item .env.example .env
 docker compose up -d
-docker compose ps
-```
-
-Mailpit có giao diện tại <http://localhost:8025>. Các cổng dịch vụ chỉ bind vào
-loopback của máy local. Nếu cổng MySQL 3306 đang được dùng, đổi `MYSQL_PORT`
-trong `.env` (ví dụ `3307`) và cập nhật cổng tương ứng trong
-`backend/.env` ở `DATABASE_URL`.
-
-### 2. Chạy backend
-
-```powershell
 cd backend
-Copy-Item .env.example .env
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 python -m uvicorn app.main:app --reload
 ```
 
-API health check: <http://localhost:8000/health>.
-
-Trên macOS/Linux, tạo môi trường ảo bằng `python3 -m venv .venv` rồi kích hoạt
-với `source .venv/bin/activate`.
-
-Chạy test backend trong thư mục `backend/`:
-
-```powershell
-python -m pytest
-```
-
-### 3. Chạy frontend
-
-Mở terminal khác:
+Trong terminal khác:
 
 ```powershell
 cd frontend
-Copy-Item .env.example .env
 npm install
 npm run dev
 ```
 
-Giao diện dev mặc định tại <http://localhost:5173>. Proxy `/api` dùng
-`VITE_DEV_API_TARGET` trong `frontend/.env`.
+API: <http://localhost:8000/health> · Frontend: <http://localhost:5173> ·
+Mailpit: <http://localhost:8025>. Nếu cổng MySQL 3306 bận, đổi `MYSQL_PORT`
+trong `.env` và cập nhật `DATABASE_URL`.
 
-Kiểm tra frontend:
-
+### Kiểm thử
 ```powershell
-npm test
-npm run build
+cd backend; python -m pytest
+cd frontend; npm test
+cd frontend; npm run build
 ```
 
-## Tài liệu dự án
+macOS/Linux: tạo môi trường bằng `python3 -m venv .venv` và kích hoạt với
+`source .venv/bin/activate`.
 
-- [Kiến trúc](docs/ARCHITECTURE.md)
-- [Tiến độ và nhật ký](docs/PROGRESS.md)
-- [Quyết định kỹ thuật](docs/DECISIONS.md)
-- [Khắc phục sự cố](docs/TROUBLESHOOTING.md)
-- [Hướng dẫn deploy](docs/DEPLOY.md)
-- [Hướng dẫn backend](backend/CLAUDE.md)
-- [Hướng dẫn frontend](frontend/CLAUDE.md)
-- [Hướng dẫn cơ sở dữ liệu](db/CLAUDE.md)
-
-## Bảo mật
-
-Không commit `.env`, mật khẩu, khóa bí mật hoặc dữ liệu dump. Chỉ dùng các file
-`.env.example` làm mẫu; thay giá trị placeholder trước khi chạy dịch vụ local.
+## Tài liệu
+- Quy tắc bắt đầu: [CLAUDE.md](CLAUDE.md)
+- [Trạng thái](docs/PROGRESS.md) · [Kiến trúc](docs/ARCHITECTURE.md) ·
+  [Quyết định](docs/DECISIONS.md) · [Roadmap](docs/PLAN.md)
+- [Questionnaire/matching](docs/QUESTIONNAIRE.md) ·
+  [Deploy](docs/DEPLOY.md) · [Sự cố](docs/TROUBLESHOOTING.md)
+- [Backend](backend/CLAUDE.md) · [Frontend](frontend/CLAUDE.md) ·
+  [Database](db/CLAUDE.md)

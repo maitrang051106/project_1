@@ -1,58 +1,39 @@
-# Kiến trúc HUST Chatbox
+# Kiến trúc
 
-> Cập nhật file này khi kiến trúc thay đổi. Quyết định và lý do nằm ở `DECISIONS.md`.
-
-## 1. Tổng quan
+## Thành phần
+```text
+Trình duyệt --HTTPS/WSS--> Vercel (React) --> Render (FastAPI)
+                                               |-- Aiven MySQL
+                                               |-- Redis
+                                               `-- SMTP
+Local: Docker Compose (MySQL, Redis, Mailpit), Vite và FastAPI chạy riêng.
 ```
-Sinh viên (trình duyệt)
-   |  HTTPS                         WebSocket (wss)
-   v                                   |
-Frontend (Vercel) --- gọi API --->  Backend FastAPI (Render) <---
-                                       |        |         |
-                                       v        v         v
-                                  MySQL (Aiven) Redis   Dịch vụ email
-```
-Khi chạy local: Docker Compose chạy MySQL, Redis, Mailpit; backend và frontend chạy trực tiếp bằng `uvicorn` và `npm run dev`.
 
-## 2. Luồng đăng nhập OTP
-```
-Client            Backend                Redis             Email
-  | request-otp --->| kiểm tra tên miền     |                 |
-  |                 | cooldown (SET NX 60s) |                 |
-  |                 | SET otp:{h} (TTL 300s)|                 |
-  |                 | gửi mail (nền) ------------------------>|
-  | verify-otp ---->| GET + so sánh HMAC    |                 |
-  |                 | DEL otp:{h}           |                 |
-  |<- cookie JWT ---| tạo/tìm user + anon_name                |
-```
-Chi tiết bảo mật: `../CLAUDE.md` mục 7.
+## Luồng chính
+- **OTP:** kiểm tra domain → cooldown → tạo OTP → lưu HMAC trong Redis 300s →
+  gửi email → xác minh một lần → phát JWT cookie. Bảo mật chi tiết tại
+  [CLAUDE.md](../CLAUDE.md).
+- **Matching:** hồ sơ gồm giới tính, ngành học, khóa. Hàng đợi ở Redis; worker
+  áp 3 bộ lọc cứng hai chiều (is_mutual_match). Tạo phòng atomic, tối đa một
+  phòng hoạt động/user; quota tính từ `started_at`.
+- **Chat:** WebSocket xác thực JWT và membership trước khi accept; Redis
+  Pub/Sub chuyển tin giữa hai phía. Kết thúc phòng ghi `ended_at`.
+- **Report:** Redis giữ buffer tối đa 1 MiB, bỏ tin cũ trước; TTL 30 phút sau
+  khi kết thúc. Report hợp lệ trong 30 phút có thể snapshot evidence mã hóa vào
+  DB, xóa 30 phút sau khi tạo.
 
-## 3. Luồng ghép cặp và chat
-1. Người dùng hoàn tất Onboarding → hồ sơ được mã hóa thành vector multi-hot, lưu `profiles`.
-2. `POST /match/join` đưa người dùng vào hàng đợi Redis `queue:matching` (kèm vector).
-3. Worker nền (~4 giây): lấy pool → `cosine_matrix` → `greedy_match` (ngưỡng cấu hình) → tạo `conversation` → báo hai người (polling `GET /match/status` hoặc sự kiện).
-4. Hai client mở `wss://…/ws/{conversation_id}`; backend xác thực JWT + kiểm tra thuộc phòng → subscribe kênh `room:{id}`; tin nhắn gửi bằng `PUBLISH`.
-5. Quá 60 giây chưa ghép được: trạng thái "chưa tìm thấy" (Sprint 3 nối HUST Buddy).
+## Redis
+| Dữ liệu | TTL/giới hạn |
+|---|---|
+| OTP HMAC | 300 giây |
+| Cooldown OTP | 60 giây |
+| Matching queue/profile cache | Thời gian chờ trong queue |
+| Pub/Sub room | Theo vòng đời phòng |
+| Buffer hội thoại | 1 MiB; TTL trượt khi hoạt động, 30 phút sau khi kết thúc |
 
-## 4. Khóa Redis
-| Khóa | Nội dung | TTL |
-|---|---|---|
-| `otp:{email_hash}` | HMAC của OTP | 300 giây |
-| `otp_cd:{email_hash}` | cooldown gửi OTP | 60 giây |
-| `otp_try:{email_hash}` | số lần thử sai | ngắn (≈5 phút) |
-| `queue:matching` | hàng đợi ghép cặp (sorted set theo thời điểm vào) | — |
-| `profile_vec:{user_id}` | vector hồ sơ trong hàng đợi | theo hàng đợi |
-| `room:{conversation_id}` | kênh Pub/Sub của phòng | — |
-
-## 5. Dữ liệu và quyền riêng tư
-- Không lưu email thô (chỉ `email_hash`); không lưu nội dung tin nhắn.
-- Dữ liệu định danh (Sprint 4) mã hóa AES, chỉ giải mã khi cả hai đồng ý Identity Reveal.
-
-## 6. Môi trường
-| Môi trường | Backend | Frontend | MySQL | Redis |
-|---|---|---|---|---|
-| Local | uvicorn | Vite dev | Docker | Docker |
-| Production (thử) | Render | Vercel | Aiven | Render Key Value hoặc dịch vụ khác (cần kiểm tra giới hạn) |
-
-## 7. Lộ trình mở rộng
-Sprint 2 Trust Score/Report/Admin → Sprint 3 chatbot RAG (ChromaDB + LLM) → Sprint 4 Semantic Cache/Intent + Identity Reveal → Sprint 5 hoàn thiện (load test, sao lưu, bảo mật).
+## Quyền riêng tư và vận hành
+- Không lưu email thô hoặc lịch sử chat dài hạn.
+- Moderation ban đầu chỉ thu thập report; placeholder `50` không đổi trust.
+- Chỉ ban khi trust về `0`; không có shadowban.
+- Quyết định sản phẩm xem [DECISIONS.md](DECISIONS.md); roadmap xem
+  [PLAN.md](PLAN.md); triển khai xem [DEPLOY.md](DEPLOY.md).
