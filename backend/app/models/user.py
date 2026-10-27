@@ -27,8 +27,10 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(191), unique=True, index=True, nullable=True)
     email_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    anon_name: Mapped[str] = mapped_column(String(50), nullable=False)
-    avatar: Mapped[str] = mapped_column(String(20), nullable=False, default=DEFAULT_AVATAR, server_default=text(f"'{DEFAULT_AVATAR}'"))
+    nickname: Mapped[str] = mapped_column(String(50), nullable=False)
+    avatar: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=DEFAULT_AVATAR, server_default=text(f"'{DEFAULT_AVATAR}'")
+    )
     trust_score: Mapped[int] = mapped_column(
         Integer, nullable=False, default=100, server_default=text("100")
     )

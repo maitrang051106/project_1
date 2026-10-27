@@ -73,7 +73,7 @@ export default function App() {
                 <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200">
                   <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-800">
                     <span className="text-sm">{user.avatar || DEFAULT_AVATAR}</span>
-                    <span>{user.anon_name || "Student"}</span>
+                    <span>{user.nickname || "Student"}</span>
                   </div>
                   <button
                     onClick={handleLogout}

@@ -74,7 +74,7 @@ async def chat_websocket(
         current_user = users_map.get(user_id)
         opp_user = users_map.get(opp_id)
 
-        anon_name = current_user.anon_name if current_user else "You"
+        nickname = current_user.nickname if current_user else "You"
         avatar = current_user.avatar if current_user else DEFAULT_AVATAR
 
         # Check existing friendship
@@ -100,7 +100,7 @@ async def chat_websocket(
                 "is_friend": is_friend,
                 "opponent": {
                     "id": opp_user.id if opp_user else opp_id,
-                    "anon_name": opp_user.anon_name if opp_user else "Partner",
+                    "nickname": opp_user.nickname if opp_user else "Partner",
                     "avatar": opp_user.avatar if opp_user else DEFAULT_AVATAR,
                     "email": opp_user.email if (is_friend and opp_user) else None,
                 },
@@ -115,7 +115,7 @@ async def chat_websocket(
         room_id,
         {
             "type": "system",
-            "content": f"{anon_name} joined the chat",
+            "content": f"{nickname} joined the chat",
             "timestamp": time.time(),
         },
     )
@@ -156,7 +156,7 @@ async def chat_websocket(
                         {
                             "type": "friend_request_received",
                             "from_user_id": user_id,
-                            "from_name": anon_name,
+                            "from_name": nickname,
                             "from_avatar": avatar,
                             "timestamp": time.time(),
                         },
@@ -199,13 +199,13 @@ async def chat_websocket(
                                 "user_a": {
                                     "id": u1.id,
                                     "email": u1.email,
-                                    "anon_name": u1.anon_name,
+                                    "nickname": u1.nickname,
                                     "avatar": u1.avatar,
                                 },
                                 "user_b": {
                                     "id": u2.id,
                                     "email": u2.email,
-                                    "anon_name": u2.anon_name,
+                                    "nickname": u2.nickname,
                                     "avatar": u2.avatar,
                                 },
                                 "timestamp": time.time(),
@@ -228,7 +228,7 @@ async def chat_websocket(
             msg = {
                 "type": "message",
                 "sender_id": user_id,
-                "sender_name": anon_name,
+                "sender_name": nickname,
                 "sender_avatar": avatar,
                 "content": content,
                 "timestamp": time.time(),
@@ -246,7 +246,7 @@ async def chat_websocket(
             room_id,
             {
                 "type": "system",
-                "content": f"{anon_name} left the chat",
+                "content": f"{nickname} left the chat",
                 "timestamp": time.time(),
             },
         )

@@ -10,19 +10,19 @@ from app.services.matching import (
 
 
 def test_gender_match() -> None:
-    assert check_gender_match(TargetGender.BAT_KI.value, Gender.NAM.value) is True
-    assert check_gender_match(TargetGender.BAT_KI.value, Gender.NU.value) is True
-    assert check_gender_match(TargetGender.NAM.value, Gender.NAM.value) is True
-    assert check_gender_match(TargetGender.NAM.value, Gender.NU.value) is False
-    assert check_gender_match(TargetGender.NU.value, Gender.NU.value) is True
-    assert check_gender_match(TargetGender.NU.value, Gender.NAM.value) is False
+    assert check_gender_match(TargetGender.ANY.value, Gender.MALE.value) is True
+    assert check_gender_match(TargetGender.ANY.value, Gender.FEMALE.value) is True
+    assert check_gender_match(TargetGender.MALE.value, Gender.MALE.value) is True
+    assert check_gender_match(TargetGender.MALE.value, Gender.FEMALE.value) is False
+    assert check_gender_match(TargetGender.FEMALE.value, Gender.FEMALE.value) is True
+    assert check_gender_match(TargetGender.FEMALE.value, Gender.MALE.value) is False
 
 
 def test_major_faculty_match() -> None:
-    # Cùng ngành
+    # Same major
     assert (
         check_major_faculty_match(
-            TargetMajorFaculty.CUNG_NGANH.value,
+            TargetMajorFaculty.SAME_MAJOR.value,
             my_faculty="SOICT",
             my_major="IT1",
             candidate_faculty="SOICT",
@@ -32,7 +32,7 @@ def test_major_faculty_match() -> None:
     )
     assert (
         check_major_faculty_match(
-            TargetMajorFaculty.CUNG_NGANH.value,
+            TargetMajorFaculty.SAME_MAJOR.value,
             my_faculty="SOICT",
             my_major="IT1",
             candidate_faculty="SOICT",
@@ -41,10 +41,10 @@ def test_major_faculty_match() -> None:
         is False
     )
 
-    # Cùng trường, khác ngành
+    # Same faculty, different major
     assert (
         check_major_faculty_match(
-            TargetMajorFaculty.CUNG_TRUONG_KHAC_NGANH.value,
+            TargetMajorFaculty.SAME_FACULTY.value,
             my_faculty="SOICT",
             my_major="IT1",
             candidate_faculty="SOICT",
@@ -54,7 +54,7 @@ def test_major_faculty_match() -> None:
     )
     assert (
         check_major_faculty_match(
-            TargetMajorFaculty.CUNG_TRUONG_KHAC_NGANH.value,
+            TargetMajorFaculty.SAME_FACULTY.value,
             my_faculty="SOICT",
             my_major="IT1",
             candidate_faculty="SOICT",
@@ -64,7 +64,7 @@ def test_major_faculty_match() -> None:
     )
     assert (
         check_major_faculty_match(
-            TargetMajorFaculty.CUNG_TRUONG_KHAC_NGANH.value,
+            TargetMajorFaculty.SAME_FACULTY.value,
             my_faculty="SOICT",
             my_major="IT1",
             candidate_faculty="SME",
@@ -73,10 +73,10 @@ def test_major_faculty_match() -> None:
         is False
     )
 
-    # Khác trường
+    # Different faculty
     assert (
         check_major_faculty_match(
-            TargetMajorFaculty.KHAC_TRUONG.value,
+            TargetMajorFaculty.DIFFERENT_FACULTY.value,
             my_faculty="SOICT",
             my_major="IT1",
             candidate_faculty="SME",
@@ -86,7 +86,7 @@ def test_major_faculty_match() -> None:
     )
     assert (
         check_major_faculty_match(
-            TargetMajorFaculty.KHAC_TRUONG.value,
+            TargetMajorFaculty.DIFFERENT_FACULTY.value,
             my_faculty="SOICT",
             my_major="IT1",
             candidate_faculty="SOICT",
@@ -95,10 +95,10 @@ def test_major_faculty_match() -> None:
         is False
     )
 
-    # Bất kì
+    # Any
     assert (
         check_major_faculty_match(
-            TargetMajorFaculty.BAT_KI.value,
+            TargetMajorFaculty.ANY.value,
             my_faculty="SOICT",
             my_major="IT1",
             candidate_faculty="SME",
@@ -109,61 +109,59 @@ def test_major_faculty_match() -> None:
 
 
 def test_cohort_match() -> None:
-    # A là K68 (cohort=68)
-    # Khóa trên: candidate_cohort < 68 (K67, K66...)
-    assert check_cohort_match(TargetCohort.KHOA_TREN.value, my_cohort=68, candidate_cohort=67) is True
-    assert check_cohort_match(TargetCohort.KHOA_TREN.value, my_cohort=68, candidate_cohort=68) is False
-    assert check_cohort_match(TargetCohort.KHOA_TREN.value, my_cohort=68, candidate_cohort=69) is False
+    # A is K68 (cohort=68)
+    # Senior: candidate_cohort < 68 (K67, K66...)
+    assert check_cohort_match(TargetCohort.SENIOR.value, my_cohort=68, candidate_cohort=67) is True
+    assert check_cohort_match(TargetCohort.SENIOR.value, my_cohort=68, candidate_cohort=68) is False
+    assert check_cohort_match(TargetCohort.SENIOR.value, my_cohort=68, candidate_cohort=69) is False
 
-    # Khóa dưới: candidate_cohort > 68 (K69, K70...)
-    assert check_cohort_match(TargetCohort.KHOA_DUOI.value, my_cohort=68, candidate_cohort=69) is True
-    assert check_cohort_match(TargetCohort.KHOA_DUOI.value, my_cohort=68, candidate_cohort=68) is False
-    assert check_cohort_match(TargetCohort.KHOA_DUOI.value, my_cohort=68, candidate_cohort=67) is False
+    # Junior: candidate_cohort > 68 (K69, K70...)
+    assert check_cohort_match(TargetCohort.JUNIOR.value, my_cohort=68, candidate_cohort=69) is True
+    assert check_cohort_match(TargetCohort.JUNIOR.value, my_cohort=68, candidate_cohort=68) is False
+    assert check_cohort_match(TargetCohort.JUNIOR.value, my_cohort=68, candidate_cohort=67) is False
 
-    # Cùng khóa: candidate_cohort == 68
-    assert check_cohort_match(TargetCohort.CUNG_KHOA.value, my_cohort=68, candidate_cohort=68) is True
-    assert check_cohort_match(TargetCohort.CUNG_KHOA.value, my_cohort=68, candidate_cohort=67) is False
+    # Same cohort: candidate_cohort == 68
+    assert check_cohort_match(TargetCohort.SAME_COHORT.value, my_cohort=68, candidate_cohort=68) is True
+    assert check_cohort_match(TargetCohort.SAME_COHORT.value, my_cohort=68, candidate_cohort=67) is False
 
-    # Bất kì
-    assert check_cohort_match(TargetCohort.BAT_KI.value, my_cohort=68, candidate_cohort=67) is True
-    assert check_cohort_match(TargetCohort.BAT_KI.value, my_cohort=68, candidate_cohort=69) is True
+    # Any
+    assert check_cohort_match(TargetCohort.ANY.value, my_cohort=68, candidate_cohort=67) is True
+    assert check_cohort_match(TargetCohort.ANY.value, my_cohort=68, candidate_cohort=69) is True
 
 
 def test_mutual_match_success() -> None:
-    # A: Nam, SOICT/IT1, K68. Tìm Nữ, cùng trường khác ngành, khóa dưới.
-    user_a = UserProfileData(user_id=1, gender="nam", faculty_code="SOICT", major_code="IT1", cohort=68)
+    # A: Male, SOICT/IT1, K68. Looking for Female, same faculty different major, junior.
+    user_a = UserProfileData(user_id=1, gender="male", faculty_code="SOICT", major_code="IT1", cohort=68)
     pref_a = MatchPreferenceData(
-        target_gender="nu",
-        target_major_faculty="cung_truong_khac_nganh",
-        target_cohort="khoa_duoi",
+        target_gender="female",
+        target_major_faculty="same_faculty",
+        target_cohort="junior",
     )
 
-    # B: Nữ, SOICT/IT2, K69. Tìm Nam, cùng trường khác ngành, khóa trên.
-    user_b = UserProfileData(user_id=2, gender="nu", faculty_code="SOICT", major_code="IT2", cohort=69)
+    # B: Female, SOICT/IT2, K69. Looking for Male, same faculty different major, senior.
+    user_b = UserProfileData(user_id=2, gender="female", faculty_code="SOICT", major_code="IT2", cohort=69)
     pref_b = MatchPreferenceData(
-        target_gender="nam",
-        target_major_faculty="cung_truong_khac_nganh",
-        target_cohort="khoa_tren",
+        target_gender="male",
+        target_major_faculty="same_faculty",
+        target_cohort="senior",
     )
 
     assert is_mutual_match(user_a, pref_a, user_b, pref_b) is True
 
 
 def test_mutual_match_fails_one_sided_preference() -> None:
-    # A: Nam, K68. Tìm khóa trên.
-    user_a = UserProfileData(user_id=1, gender="nam", faculty_code="SOICT", major_code="IT1", cohort=68)
-    pref_a = MatchPreferenceData(target_cohort="khoa_tren")
+    # A: Male, K68. Looking for senior.
+    user_a = UserProfileData(user_id=1, gender="male", faculty_code="SOICT", major_code="IT1", cohort=68)
+    pref_a = MatchPreferenceData(target_cohort="senior")
 
-    # B: Nữ, K67 (là khóa trên của A). Nhưng B CŨNG tìm khóa trên (muốn gặp K66 trở lên).
-    user_b = UserProfileData(user_id=2, gender="nu", faculty_code="SOICT", major_code="IT1", cohort=67)
-    pref_b = MatchPreferenceData(target_cohort="khoa_tren")
+    # B: Female, K67 (senior to A). But B ALSO looks for senior.
+    user_b = UserProfileData(user_id=2, gender="female", faculty_code="SOICT", major_code="IT1", cohort=67)
+    pref_b = MatchPreferenceData(target_cohort="senior")
 
-    # A thỏa mãn B (A muốn gặp B là K67), nhưng B không thỏa mãn vì A là K68 (khóa dưới của B).
     assert is_mutual_match(user_a, pref_a, user_b, pref_b) is False
 
 
 def test_mutual_match_self_fails() -> None:
-    user_a = UserProfileData(user_id=1, gender="nam", faculty_code="SOICT", major_code="IT1", cohort=68)
+    user_a = UserProfileData(user_id=1, gender="male", faculty_code="SOICT", major_code="IT1", cohort=68)
     pref_a = MatchPreferenceData()
     assert is_mutual_match(user_a, pref_a, user_a, pref_a) is False
-

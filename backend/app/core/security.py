@@ -73,12 +73,12 @@ def hash_otp(otp: str) -> str:
     return hashlib.sha256(otp.encode("utf-8")).hexdigest()
 
 
-def generate_anon_name() -> str:
-    """Tạo tên ẩn danh thân thiện cho sinh viên, ví dụ 'Cú Đêm Bá Đạo #3821'."""
+def generate_default_nickname() -> str:
+    """Generate default student nickname (e.g. 'Midnight Owl #3821')."""
     noun = random.choice(ANON_NOUNS)
     adj = random.choice(ANON_ADJECTIVES)
     num = random.randint(1000, 9999)
-    return f"{noun} {adj} #{num}"
+    return f"{adj} {noun} #{num}"
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:

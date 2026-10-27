@@ -16,27 +16,27 @@ export const DEFAULT_COHORT = 71;
 
 // Gender choices
 export const GENDER_OPTIONS = [
-  { value: "nam", label: "Male", icon: "👦" },
-  { value: "nu", label: "Female", icon: "👧" },
+  { value: "male", label: "Male", icon: "👦" },
+  { value: "female", label: "Female", icon: "👧" },
 ];
 
 // Matching preference filters
 export const TARGET_GENDER_OPTIONS = [
-  { id: "bat_ki", label: "Any Gender", icon: "👦/👧" },
-  { id: "nam", label: "Male", icon: "👦" },
-  { id: "nu", label: "Female", icon: "👧" },
+  { id: "any", label: "Any Gender", icon: "👦/👧" },
+  { id: "male", label: "Male", icon: "👦" },
+  { id: "female", label: "Female", icon: "👧" },
 ];
 
 export const TARGET_MAJOR_FACULTY_OPTIONS = [
-  { id: "bat_ki", label: "Any School / Major" },
-  { id: "cung_nganh", label: "Same Major" },
-  { id: "cung_truong_khac_nganh", label: "Same School (Different Major)" },
-  { id: "khac_truong", label: "Different School" },
+  { id: "any", label: "Any School / Major" },
+  { id: "same_major", label: "Same Major" },
+  { id: "same_faculty", label: "Same School (Different Major)" },
+  { id: "different_faculty", label: "Different School" },
 ];
 
 export const TARGET_COHORT_OPTIONS = [
-  { id: "bat_ki", label: "Any Batch" },
-  { id: "cung_khoa", label: "Same Batch" },
-  { id: "khoa_tren", label: "Senior Student (Higher Batch)" },
-  { id: "khoa_duoi", label: "Junior Student (Lower Batch)" },
+  { id: "any", label: "Any Batch" },
+  { id: "same_cohort", label: "Same Batch" },
+  { id: "senior", label: "Senior Student (Higher Batch)" },
+  { id: "junior", label: "Junior Student (Lower Batch)" },
 ];

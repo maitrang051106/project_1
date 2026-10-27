@@ -17,7 +17,7 @@ export default function Chat() {
   // Opponent & Friendship states
   const [opponent, setOpponent] = useState({
     id: null,
-    anon_name: "Anonymous Partner",
+    nickname: "Anonymous Partner",
     avatar: DEFAULT_AVATAR,
     email: null,
   });
@@ -81,7 +81,7 @@ export default function Chat() {
           if (oppData) {
             setOpponent((prev) => ({
               ...prev,
-              anon_name: oppData.anon_name || prev.anon_name,
+              nickname: oppData.nickname || prev.nickname,
               avatar: oppData.avatar || prev.avatar,
               email: oppData.email,
             }));
@@ -157,7 +157,7 @@ export default function Chat() {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-slate-900 text-sm">
-                {opponent.anon_name || "Anonymous Partner"}
+                {opponent.nickname || "Anonymous Partner"}
               </span>
               {isFriend && opponent.email && (
                 <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-800">
@@ -284,7 +284,7 @@ export default function Chat() {
               >
                 {!isMe && (
                   <div className="text-[10px] font-bold text-slate-400 mb-0.5">
-                    {msg.sender_name || opponent.anon_name}
+                    {msg.sender_name || opponent.nickname}
                   </div>
                 )}
                 <p className="whitespace-pre-wrap break-words leading-relaxed">

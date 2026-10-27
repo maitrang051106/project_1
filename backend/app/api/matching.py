@@ -27,9 +27,9 @@ router = APIRouter(prefix="/match", tags=["matching"])
 
 
 class MatchJoinIn(BaseModel):
-    target_gender: str = Field(default=TargetGender.BAT_KI.value)
-    target_major_faculty: str = Field(default=TargetMajorFaculty.BAT_KI.value)
-    target_cohort: str = Field(default=TargetCohort.BAT_KI.value)
+    target_gender: str = Field(default=TargetGender.ANY.value)
+    target_major_faculty: str = Field(default=TargetMajorFaculty.ANY.value)
+    target_cohort: str = Field(default=TargetCohort.ANY.value)
 
 
 @router.post("/join")
@@ -89,7 +89,7 @@ async def join_matching(
             select(User).where(User.id == cand_user_id).options(selectinload(User.profile))
         )
         cand_user = cand_user_res.scalar_one_or_none()
-        cand_anon_name = cand_user.anon_name if cand_user else "Người bạn ẩn danh"
+        cand_nickname = cand_user.nickname if cand_user else "Anonymous Partner"
 
         # Tạo Conversation trong Database
         conv = Conversation(
@@ -106,15 +106,15 @@ async def join_matching(
             user_a_id=user.id,
             user_b_id=cand_user_id,
             room_id=conv.id,
-            partner_a_info={"anon_name": cand_anon_name, "gender": cand_prof.gender, "cohort": cand_prof.cohort},
-            partner_b_info={"anon_name": user.anon_name, "gender": my_profile.gender, "cohort": my_profile.cohort},
+            partner_a_info={"nickname": cand_nickname, "gender": cand_prof.gender, "cohort": cand_prof.cohort},
+            partner_b_info={"nickname": user.nickname, "gender": my_profile.gender, "cohort": my_profile.cohort},
         )
 
         return {
             "status": "matched",
             "room_id": conv.id,
             "partner": {
-                "anon_name": cand_anon_name,
+                "nickname": cand_nickname,
                 "gender": cand_prof.gender,
                 "cohort": cand_prof.cohort,
             },

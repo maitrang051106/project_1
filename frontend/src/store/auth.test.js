@@ -8,7 +8,7 @@ describe("auth store", () => {
   });
 
   it("stores the current user in memory", () => {
-    const user = { anonName: "Anonymous_Fox" };
+    const user = { nickname: "Anonymous_Fox" };
 
     useAuthStore.getState().setUser(user);
 
@@ -16,7 +16,7 @@ describe("auth store", () => {
   });
 
   it("clears the current user", () => {
-    useAuthStore.setState({ user: { anonName: "Anonymous_Fox" } });
+    useAuthStore.setState({ user: { nickname: "Anonymous_Fox" } });
 
     useAuthStore.getState().clearUser();
 

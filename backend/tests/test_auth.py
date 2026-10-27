@@ -2,7 +2,7 @@ from app.core.security import (
     create_access_token,
     create_email_hash,
     decode_access_token,
-    generate_anon_name,
+    generate_default_nickname,
     generate_otp,
     hash_password,
     is_valid_hust_email,
@@ -48,8 +48,8 @@ def test_generate_otp() -> None:
     assert otp.isdigit()
 
 
-def test_generate_anon_name() -> None:
-    name = generate_anon_name()
+def test_generate_default_nickname() -> None:
+    name = generate_default_nickname()
     assert "#" in name
     assert len(name.split()) >= 2
 

@@ -143,7 +143,7 @@ export default function Messages() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-xs text-slate-900 truncate">
-                      {friend.anon_name}
+                      {friend.nickname}
                     </span>
                     {friend.last_message_at && (
                       <span className="text-[10px] text-slate-400 shrink-0">
@@ -176,7 +176,7 @@ export default function Messages() {
                 </div>
                 <div>
                   <div className="font-semibold text-slate-900 text-sm">
-                    {activeFriend.anon_name}
+                    {activeFriend.nickname}
                   </div>
                   <div className="text-xs text-slate-500 flex items-center gap-1">
                     <span>✉️</span>

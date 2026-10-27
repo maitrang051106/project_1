@@ -18,7 +18,7 @@
 3. **Password Reset**: Email $\to$ OTP verification $\to$ New password.
 
 ### Identity & Presentation
-- **Nickname (`anon_name`)**: User-defined custom alias (e.g. "Midnight Coder").
+- **Nickname (`nickname`)**: User-defined custom alias (e.g. "Midnight Coder").
 - **Avatar (`avatar`)**: User-selected emoji avatar (e.g. 🦉, 🐱, 🐸, 🐶, 🐵, 🐰, 🐻, 🐧, 🐹, 🦊, 🐼).
 - **Navbar**: Displays chosen Avatar + Nickname + Sign Out button.
 
@@ -30,7 +30,7 @@ Users must complete profile setup before joining the matching queue:
 
 | Field | Key | Type | Valid Values / Constraints |
 |---|---|---|---|
-| **Gender** | `gender` | `VARCHAR(10)` | `"nam"` (Male), `"nu"` (Female) |
+| **Gender** | `gender` | `VARCHAR(10)` | `"male"`, `"female"` |
 | **Major & Faculty** | `major_code`<br>`faculty_code` | `VARCHAR(20)`<br>`VARCHAR(20)` | `major_code`: Selected from the 68 official HUST majors.<br>`faculty_code`: Associated School/Institute. |
 | **Cohort (Batch)** | `cohort` | `INT` | Integer from 63 to 71 representing student batch (K63 to K71). |
 
@@ -41,21 +41,21 @@ Users must complete profile setup before joining the matching queue:
 When joining the queue, users specify 3 preferences:
 
 ### 1. Target Gender (`target_gender`)
-* `"nam"`: Male only (`candidate.gender == "nam"`).
-* `"nu"`: Female only (`candidate.gender == "nu"`).
-* `"bat_ki"`: Any gender.
+* `"male"`: Male only (`candidate.gender == "male"`).
+* `"female"`: Female only (`candidate.gender == "female"`).
+* `"any"`: Any gender.
 
 ### 2. Target Major / School (`target_major_faculty`)
-* `"cung_nganh"`: Same major (`candidate.major_code == my.major_code`).
-* `"cung_truong_khac_nganh"`: Same school, different major.
-* `"khac_truong"`: Different school.
-* `"bat_ki"`: Any major or school.
+* `"same_major"`: Same major (`candidate.major_code == my.major_code`).
+* `"same_faculty"`: Same school, different major.
+* `"different_faculty"`: Different school.
+* `"any"`: Any major or school.
 
 ### 3. Target Cohort (`target_cohort`)
-* `"khoa_tren"`: Senior student (`candidate.cohort < my.cohort`).
-* `"khoa_duoi"`: Junior student (`candidate.cohort > my.cohort`).
-* `"cung_khoa"`: Same batch (`candidate.cohort == my.cohort`).
-* `"bat_ki"`: Any batch.
+* `"senior"`: Senior student (`candidate.cohort < my.cohort`).
+* `"junior"`: Junior student (`candidate.cohort > my.cohort`).
+* `"same_cohort"`: Same batch (`candidate.cohort == my.cohort`).
+* `"any"`: Any batch.
 
 ### Mutual Condition
 $$\text{IsMatch}(A, B) \iff \text{Satisfies}(A \to B) \land \text{Satisfies}(B \to A) \land (A \neq B)$$

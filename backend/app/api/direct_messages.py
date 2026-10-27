@@ -85,7 +85,7 @@ async def get_friends(
             {
                 "id": friend_user.id,
                 "email": friend_user.email,
-                "anon_name": friend_user.anon_name,
+                "nickname": friend_user.nickname,
                 "avatar": friend_user.avatar,
                 "last_message": last_msg.content if last_msg else None,
                 "last_message_at": last_msg.created_at.isoformat() if last_msg else None,
@@ -189,7 +189,7 @@ async def send_direct_message(
         "receiver_id": dm.receiver_id,
         "content": dm.content,
         "created_at": dm.created_at.isoformat(),
-        "sender_name": user.anon_name,
+        "sender_name": user.nickname,
         "sender_avatar": user.avatar,
     }
     await store_service.broadcast_to_room(room_key, msg_dict)
@@ -237,7 +237,7 @@ async def direct_message_websocket(
 
         u_res = await db.execute(select(User).where(User.id == user_id))
         user = u_res.scalar_one_or_none()
-        anon_name = user.anon_name if user else "Friend"
+        nickname = user.nickname if user else "Friend"
         avatar = user.avatar if user else DEFAULT_AVATAR
 
     await websocket.accept()
@@ -279,7 +279,7 @@ async def direct_message_websocket(
                 "receiver_id": dm.receiver_id,
                 "content": dm.content,
                 "created_at": dm.created_at.isoformat(),
-                "sender_name": anon_name,
+                "sender_name": nickname,
                 "sender_avatar": avatar,
             }
             await store_service.broadcast_to_room(room_key, msg_dict)

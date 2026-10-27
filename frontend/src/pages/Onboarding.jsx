@@ -14,7 +14,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const { user, setUser } = useAuthStore();
 
-  const [nickname, setNickname] = useState(user?.anon_name || "");
+  const [nickname, setNickname] = useState(user?.nickname || "");
   const [avatar, setAvatar] = useState(user?.avatar || DEFAULT_AVATAR);
   const [gender, setGender] = useState(GENDER_OPTIONS[0].value);
   const [majorCode, setMajorCode] = useState("");
@@ -64,7 +64,7 @@ export default function Onboarding() {
           gender,
           major_code: majorCode,
           cohort: Number(cohort),
-          anon_name: nickname.trim() || undefined,
+          nickname: nickname.trim() || undefined,
           avatar,
         }),
       });
@@ -78,7 +78,7 @@ export default function Onboarding() {
       if (user) {
         setUser({
           ...user,
-          anon_name: nickname.trim() || user.anon_name,
+          nickname: nickname.trim() || user.nickname,
           avatar: avatar || user.avatar,
         });
       }
@@ -112,48 +112,53 @@ export default function Onboarding() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Nickname & Avatar */}
-        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Your Nickname
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Midnight Coder"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
-            />
-          </div>
+        {/* Step 1: Nickname */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-900 mb-0.5">
+            1. Your Nickname
+          </label>
+          <p className="text-xs text-slate-500 mb-2">
+            Your name for anonymous conversations
+          </p>
+          <input
+            type="text"
+            placeholder="e.g. Midnight Owl"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+          />
+        </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Pick Your Avatar Emoji
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {AVATAR_OPTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => setAvatar(emoji)}
-                  className={`h-9 w-9 rounded-xl text-lg flex items-center justify-center border transition ${
-                    avatar === emoji
-                      ? "border-red-700 bg-red-100 scale-110 shadow-sm"
-                      : "border-slate-200 bg-white hover:bg-slate-100"
-                  }`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+        {/* Avatar Selection */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-900 mb-1">
+            Choose Avatar Emoji
+          </label>
+          <p className="text-xs text-slate-500 mb-2">
+            Pick an animal icon that represents your profile
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {AVATAR_OPTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => setAvatar(emoji)}
+                className={`h-10 w-10 rounded-xl text-xl flex items-center justify-center border transition ${
+                  avatar === emoji
+                    ? "border-red-700 bg-red-100 scale-110 shadow-sm"
+                    : "border-slate-200 bg-white hover:bg-slate-100"
+                }`}
+              >
+                {emoji}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Question 1: Gender */}
+        {/* Step 2: Gender */}
         <div>
           <label className="block text-sm font-semibold text-slate-900 mb-2">
-            1. Your Gender
+            2. Your Gender
           </label>
           <div className="grid grid-cols-2 gap-3">
             {GENDER_OPTIONS.map((g) => (
@@ -174,10 +179,10 @@ export default function Onboarding() {
           </div>
         </div>
 
-        {/* Question 2: Major */}
+        {/* Step 3: Major */}
         <div>
           <label className="block text-sm font-semibold text-slate-900 mb-1">
-            2. Your Major (HUST)
+            3. Your Major (HUST)
           </label>
           <p className="text-xs text-slate-500 mb-2">
             Choose from 68 official majors across HUST schools and institutes
@@ -221,10 +226,10 @@ export default function Onboarding() {
           </div>
         </div>
 
-        {/* Question 3: Cohort */}
+        {/* Step 4: Cohort */}
         <div>
           <label className="block text-sm font-semibold text-slate-900 mb-1">
-            3. Your Cohort (K63 - K71)
+            4. Your Cohort (K63 - K71)
           </label>
           <p className="text-xs text-slate-500 mb-2">
             Select your academic batch from K63 to K71
@@ -254,7 +259,7 @@ export default function Onboarding() {
           disabled={loading || !majorCode}
           className="w-full rounded-xl bg-red-700 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:opacity-50 transition"
         >
-          {loading ? "Saving Profile..." : "Complete Profile & Start Matching"}
+          {loading ? "Saving Profile..." : "Save Profile & Continue"}
         </button>
       </form>
     </div>

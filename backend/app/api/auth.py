@@ -18,7 +18,7 @@ from app.core.db import get_db
 from app.core.security import (
     create_access_token,
     create_email_hash,
-    generate_anon_name,
+    generate_default_nickname,
     generate_otp,
     hash_otp,
     hash_password,
@@ -43,7 +43,7 @@ class RegisterIn(BaseModel):
     email: str
     otp: str
     password: str = Field(min_length=6, description="Password must be at least 6 characters")
-    anon_name: str | None = None
+    nickname: str | None = None
     avatar: str | None = None
 
 
@@ -150,7 +150,7 @@ async def register(
     user = res.scalar_one_or_none()
 
     pwd_hash = hash_password(payload.password)
-    anon_name = (payload.anon_name or "").strip() or generate_anon_name()
+    chosen_nickname = (payload.nickname or "").strip() or generate_default_nickname()
     avatar = (payload.avatar or "").strip() or DEFAULT_AVATAR
 
     if not user:
@@ -158,7 +158,7 @@ async def register(
             email=norm_email,
             email_hash=email_hash,
             password_hash=pwd_hash,
-            anon_name=anon_name,
+            nickname=chosen_nickname,
             avatar=avatar,
             trust_score=100,
         )
@@ -171,7 +171,7 @@ async def register(
             )
         user.email = norm_email
         user.password_hash = pwd_hash
-        user.anon_name = anon_name
+        user.nickname = chosen_nickname
         user.avatar = avatar
         user.last_login_at = func.now()
 
@@ -197,7 +197,7 @@ async def register(
         "user": {
             "id": user.id,
             "email": user.email,
-            "anon_name": user.anon_name,
+            "nickname": user.nickname,
             "avatar": user.avatar,
             "trust_score": user.trust_score,
             "role": user.role.value,
@@ -259,7 +259,7 @@ async def login(
         "user": {
             "id": user.id,
             "email": user.email,
-            "anon_name": user.anon_name,
+            "nickname": user.nickname,
             "avatar": user.avatar,
             "trust_score": user.trust_score,
             "role": user.role.value,
@@ -350,7 +350,7 @@ async def reset_password(
         "user": {
             "id": user.id,
             "email": user.email,
-            "anon_name": user.anon_name,
+            "nickname": user.nickname,
             "avatar": user.avatar,
             "trust_score": user.trust_score,
             "role": user.role.value,
@@ -386,7 +386,7 @@ async def verify_otp(
         user = User(
             email=norm_email,
             email_hash=email_hash,
-            anon_name=generate_anon_name(),
+            nickname=generate_default_nickname(),
             avatar=DEFAULT_AVATAR,
             trust_score=100,
         )
@@ -409,7 +409,7 @@ async def verify_otp(
         "user": {
             "id": user.id,
             "email": user.email,
-            "anon_name": user.anon_name,
+            "nickname": user.nickname,
             "avatar": user.avatar,
             "trust_score": user.trust_score,
             "role": user.role.value,
@@ -434,7 +434,7 @@ async def get_me(user: User = Depends(get_current_user)) -> dict[str, Any]:
         "user": {
             "id": user.id,
             "email": user.email,
-            "anon_name": user.anon_name,
+            "nickname": user.nickname,
             "avatar": user.avatar,
             "trust_score": user.trust_score,
             "role": user.role.value,

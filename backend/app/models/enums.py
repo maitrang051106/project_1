@@ -17,25 +17,25 @@ class ConversationType(str, Enum):
 
 
 class Gender(str, Enum):
-    NAM = "nam"
-    NU = "nu"
+    MALE = "male"
+    FEMALE = "female"
 
 
 class TargetGender(str, Enum):
-    NAM = "nam"
-    NU = "nu"
-    BAT_KI = "bat_ki"
+    MALE = "male"
+    FEMALE = "female"
+    ANY = "any"
 
 
 class TargetMajorFaculty(str, Enum):
-    CUNG_NGANH = "cung_nganh"
-    CUNG_TRUONG_KHAC_NGANH = "cung_truong_khac_nganh"
-    KHAC_TRUONG = "khac_truong"
-    BAT_KI = "bat_ki"
+    SAME_MAJOR = "same_major"
+    SAME_FACULTY = "same_faculty"
+    DIFFERENT_FACULTY = "different_faculty"
+    ANY = "any"
 
 
 class TargetCohort(str, Enum):
-    KHOA_TREN = "khoa_tren"
-    KHOA_DUOI = "khoa_duoi"
-    CUNG_KHOA = "cung_khoa"
-    BAT_KI = "bat_ki"
+    SENIOR = "senior"
+    JUNIOR = "junior"
+    SAME_COHORT = "same_cohort"
+    ANY = "any"

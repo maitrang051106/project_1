@@ -35,7 +35,7 @@ def test_user_schema_and_enum_values() -> None:
     assert "password_hash" in user_columns
     assert "avatar" in user_columns
     assert "email_hash" in user_columns
-    assert "anon_name" in user_columns
+    assert "nickname" in user_columns
     assert "trust_score" in user_columns
     assert "status" in user_columns
     assert "role" in user_columns
@@ -57,11 +57,11 @@ def test_profile_schema_fields() -> None:
     assert "major_code" in profile_columns
     assert "cohort" in profile_columns
 
-    assert Gender.NAM.value == "nam"
-    assert Gender.NU.value == "nu"
-    assert TargetGender.BAT_KI.value == "bat_ki"
-    assert TargetMajorFaculty.CUNG_NGANH.value == "cung_nganh"
-    assert TargetCohort.KHOA_TREN.value == "khoa_tren"
+    assert Gender.MALE.value == "male"
+    assert Gender.FEMALE.value == "female"
+    assert TargetGender.ANY.value == "any"
+    assert TargetMajorFaculty.SAME_MAJOR.value == "same_major"
+    assert TargetCohort.SENIOR.value == "senior"
 
 
 def test_conversation_schema_and_relationships() -> None:

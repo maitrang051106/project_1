@@ -16,10 +16,10 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 
 
 class ProfileSubmitIn(BaseModel):
-    gender: str = Field(..., description="'nam' or 'nu'")
+    gender: str = Field(..., description="'male' or 'female'")
     major_code: str = Field(..., description="HUST major code, e.g. 'IT1', 'EE2'")
     cohort: int = Field(..., ge=MIN_COHORT, le=MAX_COHORT, description=f"Student cohort, from K{MIN_COHORT} to K{MAX_COHORT}")
-    anon_name: str | None = Field(default=None, description="Custom nickname")
+    nickname: str | None = Field(default=None, description="Custom nickname")
     avatar: str | None = Field(default=None, description="Custom avatar emoji")
 
 
@@ -65,11 +65,16 @@ async def create_or_update_profile(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    gender = payload.gender.strip().lower()
-    if gender not in (Gender.NAM.value, Gender.NU.value):
+    raw_gender = payload.gender.strip().lower()
+    # Normalize 'nam' -> 'male', 'nu' -> 'female' if sent by old clients
+    if raw_gender in ("nam", "male"):
+        gender = Gender.MALE.value
+    elif raw_gender in ("nu", "female"):
+        gender = Gender.FEMALE.value
+    else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Gender must be 'nam' (Male) or 'nu' (Female).",
+            detail="Gender must be 'male' or 'female'.",
         )
 
     major_code = payload.major_code.strip().upper()
@@ -83,8 +88,9 @@ async def create_or_update_profile(
     faculty_code = major_info["faculty_code"]
 
     # Update nickname and avatar if provided
-    if payload.anon_name and payload.anon_name.strip():
-        user.anon_name = payload.anon_name.strip()
+    chosen_name = (payload.nickname or "").strip()
+    if chosen_name:
+        user.nickname = chosen_name
     if payload.avatar and payload.avatar.strip():
         user.avatar = payload.avatar.strip()
 
@@ -118,7 +124,7 @@ async def create_or_update_profile(
             "cohort": profile.cohort,
         },
         "user": {
-            "anon_name": user.anon_name,
+            "nickname": user.nickname,
             "avatar": user.avatar,
         },
     }

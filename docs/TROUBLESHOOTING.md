@@ -16,6 +16,12 @@ cách sửa và cách phòng tránh. Mục mới nhất đặt trên cùng.
 
 ## Nhật ký
 
+### 27/10/2026 – Render: TypeError descriptor '__getitem__' requires a 'typing.Union' object but received a 'tuple'
+- **Triệu chứng:** Render deploy fail khi chạy `python -m alembic upgrade head` với traceback chỉ tới `/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/util/typing.py`.
+- **Nguyên nhân:** Render tự động dùng Python 3.14 (bản preview/pre-release). Python 3.14 có thay đổi nội bộ về `typing.Union`, làm xung đột với SQLAlchemy 2.0 khi phân giải kiểu `Mapped[float | None]`.
+- **Cách sửa:** Khóa phiên bản Python ổn định `3.12.8` bằng file `.python-version` và biến môi trường `PYTHON_VERSION=3.12.8` trên Render Dashboard -> Environment.
+- **Phòng tránh:** Luôn chỉ định rõ phiên bản Python (`.python-version`) trong các dự án production.
+
 ### 27/10/2026 – Render: No module named alembic
 - **Triệu chứng:** Render deploy thất bại với log `/opt/render/project/src/.venv/bin/python: No module named alembic`.
 - **Nguyên nhân:** Commit đang chạy trên Render chưa được commit/push các thư viện `alembic`, `SQLAlchemy`, `aiomysql` và thư mục `migrations/`.

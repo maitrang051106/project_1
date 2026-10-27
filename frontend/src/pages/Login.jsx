@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { useAuthStore } from "../store/auth";
-import { AVATAR_OPTIONS, DEFAULT_AVATAR, STUDENT_EMAIL_DOMAIN } from "../lib/constants";
+import { STUDENT_EMAIL_DOMAIN } from "../lib/constants";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,8 +16,6 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
 
   // Flow states
   const [otpSent, setOtpSent] = useState(false);
@@ -138,8 +136,6 @@ export default function Login() {
           email: email.trim().toLowerCase(),
           otp: otp.trim(),
           password,
-          anon_name: nickname.trim() || undefined,
-          avatar,
         }),
       });
       const data = await res.json();
@@ -411,47 +407,12 @@ export default function Login() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Choose Nickname (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Midnight Coder"
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Choose Avatar
-                  </label>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {AVATAR_OPTIONS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => setAvatar(emoji)}
-                        className={`h-9 w-9 rounded-xl text-lg flex items-center justify-center border transition ${
-                          avatar === emoji
-                            ? "border-red-700 bg-red-50 scale-110 shadow-sm"
-                            : "border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <button
                   type="submit"
                   disabled={loading}
                   className="w-full rounded-xl bg-red-700 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:opacity-50 transition"
                 >
-                  {loading ? "Creating Account..." : "Create Account & Sign In"}
+                  {loading ? "Creating Account..." : "Create Account"}
                 </button>
               </form>
             )}

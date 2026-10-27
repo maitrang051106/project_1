@@ -1,3 +1,7 @@
+import re
+from urllib.parse import urlparse
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,5 +30,26 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def normalize_database_url(cls, v: str) -> str:
+        # Auto-convert mysql:// to async driver mysql+aiomysql://
+        if v.startswith("mysql://"):
+            v = "mysql+aiomysql://" + v[len("mysql://"):]
+        # Remove unsupported query params like ?ssl-mode=REQUIRED
+        v = re.sub(r"[?&]ssl-mode=[^&]*", "", v)
+        v = re.sub(r"[?&]$", "", v)
+        return v
+
+    @field_validator("frontend_origin", mode="after")
+    @classmethod
+    def normalize_frontend_origin(cls, v: str) -> str:
+        # Strip trailing path (e.g. /login) so browser CORS Origin header matches
+        parsed = urlparse(v)
+        if parsed.scheme and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}"
+        return v.rstrip("/")
+
 
 settings = Settings()
+

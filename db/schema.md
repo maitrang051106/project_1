@@ -23,7 +23,7 @@ erDiagram
         varchar email UK "SIS student email"
         char email_hash UK
         varchar password_hash "PBKDF2-HMAC-SHA256"
-        varchar anon_name "Nickname"
+        varchar nickname "Custom alias"
         varchar avatar "Emoji avatar"
         int trust_score
         enum status "active or banned"
@@ -33,7 +33,7 @@ erDiagram
     }
     PROFILES {
         int user_id PK "also FK to USERS"
-        string gender "nam or nu"
+        string gender "male or female"
         string faculty_code FK
         string major_code FK
         int cohort "cohort K63-K71 (63..71)"
@@ -76,7 +76,7 @@ erDiagram
 | `email` | `VARCHAR(191)` | Unique, student email (`@sis.hust.edu.vn`) |
 | `email_hash` | `CHAR(64)` | Required, unique HMAC-SHA256 of normalized email |
 | `password_hash` | `VARCHAR(255)` | Salted PBKDF2-HMAC-SHA256 hash |
-| `anon_name` | `VARCHAR(50)` | User-chosen nickname |
+| `nickname` | `VARCHAR(50)` | User-chosen nickname |
 | `avatar` | `VARCHAR(20)` | User-chosen avatar emoji (default 🦉) |
 | `trust_score` | `INT` | Default `100` |
 | `status` | `ENUM` | `active`, `banned`; default `active` |
