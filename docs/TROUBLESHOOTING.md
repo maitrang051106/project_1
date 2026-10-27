@@ -16,6 +16,12 @@ cách sửa và cách phòng tránh. Mục mới nhất đặt trên cùng.
 
 ## Nhật ký
 
+### 27/10/2026 – Aiven: SSLCertVerificationError certificate verify failed (self-signed certificate)
+- **Triệu chứng:** `ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain` khi chạy `python -m alembic upgrade head` trên Render.
+- **Nguyên nhân:** Aiven Cloud MySQL sử dụng CA certificate nội bộ (self-signed đối với hệ điều hành Linux tiêu chuẩn trên Render). Khi truyền `connect_args={"ssl": True}`, Python's `ssl.create_default_context()` mặc định yêu cầu CA được hệ điều hành tin cậy (`CERT_REQUIRED`), dẫn đến lỗi từ chối chuỗi chứng chỉ.
+- **Cách sửa:** Khởi tạo `ssl.SSLContext` với `check_hostname = False` và `verify_mode = ssl.CERT_NONE`, truyền qua `connect_args={"ssl": ssl_ctx}` trong `db.py` và `migrations/env.py`. Điều này cho phép kết nối được mã hóa TLS đầy đủ mà không bị chặn bởi chứng chỉ self-signed của Aiven.
+- **Phòng tránh:** Với các Cloud DB dùng CA riêng mà không gắn kèm file chứng chỉ CA cert (`ca.pem`), cấu hình SSL context linh hoạt theo hostname database.
+
 ### 27/10/2026 – Render: TypeError descriptor '__getitem__' requires a 'typing.Union' object but received a 'tuple'
 - **Triệu chứng:** Render deploy fail khi chạy `python -m alembic upgrade head` với traceback chỉ tới `/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/util/typing.py`.
 - **Nguyên nhân:** Render tự động dùng Python 3.14 (bản preview/pre-release). Python 3.14 có thay đổi nội bộ về `typing.Union`, làm xung đột với SQLAlchemy 2.0 khi phân giải kiểu `Mapped[float | None]`.

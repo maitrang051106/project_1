@@ -6,6 +6,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
+from app.core.db import get_db_connect_args
 from app.models import Base
 
 config = context.config
@@ -46,7 +47,7 @@ async def run_migrations_online() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        connect_args={"ssl": True} if "aivencloud.com" in settings.database_url or "ssl" in settings.database_url.lower() else {},
+        connect_args=get_db_connect_args(settings.database_url),
     )
 
     async with connectable.connect() as connection:
