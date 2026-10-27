@@ -16,6 +16,12 @@ cách sửa và cách phòng tránh. Mục mới nhất đặt trên cùng.
 
 ## Nhật ký
 
+### 27/10/2026 – Uvicorn: ImportError cannot import name 'SessionLocal' from 'app.core.db'
+- **Triệu chứng:** Alembic upgrade thành công nhưng Uvicorn crash lúc khởi động với lỗi: `ImportError: cannot import name 'SessionLocal' from 'app.core.db' (/opt/render/project/src/backend/app/core/db.py)`.
+- **Nguyên nhân:** Các router WebSocket (`chat.py` và `direct_messages.py`) import `SessionLocal` để tự mở session DB bất đồng bộ trong vòng lặp socket (`async with SessionLocal() as db:`). Trong đợt refactor DB sang lazy-loading, `SessionLocal` chưa được khai báo lại trong `db.py`.
+- **Cách sửa:** Khai báo `_SessionLocalProxy` trong `backend/app/core/db.py` và gán `SessionLocal = _SessionLocalProxy()` để tự động ủy quyền cuộc gọi tới `get_session_factory()` mà vẫn bảo toàn cơ chế lazy-load DB engine. Thêm kiểm thử hồi quy `test_main.py` để luôn nạp `app.main` và toàn bộ router khi chạy `pytest`.
+- **Phòng tránh:** Luôn có ít nhất 1 bài test kiểm tra import toàn bộ `app.main` và OpenAPI paths trong bộ test tự động.
+
 ### 27/10/2026 – Aiven: SSLCertVerificationError certificate verify failed (self-signed certificate)
 - **Triệu chứng:** `ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain` khi chạy `python -m alembic upgrade head` trên Render.
 - **Nguyên nhân:** Aiven Cloud MySQL sử dụng CA certificate nội bộ (self-signed đối với hệ điều hành Linux tiêu chuẩn trên Render). Khi truyền `connect_args={"ssl": True}`, Python's `ssl.create_default_context()` mặc định yêu cầu CA được hệ điều hành tin cậy (`CERT_REQUIRED`), dẫn đến lỗi từ chối chuỗi chứng chỉ.

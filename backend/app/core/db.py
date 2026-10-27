@@ -51,3 +51,25 @@ async def get_db() -> AsyncIterator[AsyncSession]:
     session_factory = get_session_factory()
     async with session_factory() as session:
         yield session
+
+
+class _SessionLocalProxy:
+    """Proxy object that delegates to get_session_factory() while preserving lazy initialization."""
+
+    def __call__(self, *args: Any, **kwargs: Any) -> AsyncSession:
+        return get_session_factory()(*args, **kwargs)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(get_session_factory(), name)
+
+
+SessionLocal = _SessionLocalProxy()
+
+__all__ = [
+    "get_engine",
+    "get_session_factory",
+    "get_db",
+    "SessionLocal",
+    "get_db_connect_args",
+]
+
