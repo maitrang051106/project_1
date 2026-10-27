@@ -41,3 +41,21 @@ def test_get_db_connect_args_for_aiven_cloud() -> None:
 def test_get_db_connect_args_for_sqlite() -> None:
     args = get_db_connect_args("sqlite+aiosqlite:///:memory:")
     assert args == {}
+
+
+def test_settings_email_configuration(monkeypatch) -> None:
+    monkeypatch.setenv("EMAIL_HOST", "smtp.gmail.com")
+    monkeypatch.setenv("EMAIL_PORT", "587")
+    monkeypatch.setenv("EMAIL_USERNAME", "testuser@gmail.com")
+    monkeypatch.setenv("EMAIL_PASSWORD", "abcd efgh ijkl mnop")
+    monkeypatch.setenv("EMAIL_FROM", "testuser@gmail.com")
+    monkeypatch.setenv("EMAIL_USE_TLS", "true")
+
+    settings = Settings(_env_file=None)
+    assert settings.email_host == "smtp.gmail.com"
+    assert settings.email_port == 587
+    assert settings.email_username == "testuser@gmail.com"
+    assert settings.email_password == "abcd efgh ijkl mnop"
+    assert settings.email_from == "testuser@gmail.com"
+    assert settings.email_use_tls is True
+

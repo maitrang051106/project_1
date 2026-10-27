@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class StoreService:
-    """Quản lý trạng thái tạm thời (OTP, cooldown, hàng đợi matching, kết quả ghép).
-    Tự động dùng Redis nếu kết nối được, hoặc chuyển sang in-memory fallback an toàn.
+    """Manage transient state (OTP, cooldown, matching queue, match results).
+    Automatically uses Redis if available, or falls back safely to in-memory store.
     """
 
     def __init__(self) -> None:
@@ -69,7 +69,7 @@ class StoreService:
             await self.delete_key(key)
             return True
 
-        # Tăng số lần thử sai
+        # Increment failed attempt count
         data["attempts"] = data.get("attempts", 0) + 1
         if r:
             ttl = await r.ttl(key)
@@ -118,7 +118,7 @@ class StoreService:
 
     async def get_queue_candidates(self, exclude_user_id: int) -> list[dict]:
         now = time.time()
-        # Loại bỏ các candidate timeout quá 60s
+        # Evict candidates timed out (> 60s)
         stale = [uid for uid, item in self._in_memory_queue.items() if now - item["joined_at"] > 60]
         for uid in stale:
             self._in_memory_queue.pop(uid, None)

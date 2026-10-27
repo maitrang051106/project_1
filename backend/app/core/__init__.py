@@ -1,1 +1,1 @@
-"""Cấu hình và thành phần cốt lõi của ứng dụng."""
+"""Core application configuration and components."""

@@ -1,1 +1,1 @@
-"""Các API router của ứng dụng."""
+"""Application API routers."""

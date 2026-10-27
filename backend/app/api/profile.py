@@ -1,26 +1,17 @@
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.core.constants import MAX_COHORT, MIN_COHORT
 from app.core.db import get_db
 from app.models.enums import Gender
 from app.models.profile import Profile
 from app.models.user import User
+from app.schemas.profile import ProfileSubmitIn
 from app.services.catalog import get_all_majors, get_major_by_code
 
 router = APIRouter(prefix="/profile", tags=["profile"])
-
-
-class ProfileSubmitIn(BaseModel):
-    gender: str = Field(..., description="'male' or 'female'")
-    major_code: str = Field(..., description="HUST major code, e.g. 'IT1', 'EE2'")
-    cohort: int = Field(..., ge=MIN_COHORT, le=MAX_COHORT, description=f"Student cohort, from K{MIN_COHORT} to K{MAX_COHORT}")
-    nickname: str | None = Field(default=None, description="Custom nickname")
-    avatar: str | None = Field(default=None, description="Custom avatar emoji")
 
 
 @router.get("/catalog")
@@ -66,10 +57,9 @@ async def create_or_update_profile(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     raw_gender = payload.gender.strip().lower()
-    # Normalize 'nam' -> 'male', 'nu' -> 'female' if sent by old clients
-    if raw_gender in ("nam", "male"):
+    if raw_gender == Gender.MALE.value:
         gender = Gender.MALE.value
-    elif raw_gender in ("nu", "female"):
+    elif raw_gender == Gender.FEMALE.value:
         gender = Gender.FEMALE.value
     else:
         raise HTTPException(

@@ -1,7 +1,7 @@
 # Database Schema Design
 
 > **Core MVP Tables**: `users`, `profiles`, `conversations`, `friendships`, and `direct_messages`.
-> Profile specifications and 3-criteria mutual matching filters are documented in [docs/QUESTIONNAIRE.md](../docs/QUESTIONNAIRE.md).
+> Profile specifications and 3-criteria mutual matching filters are documented in [docs/SYSTEM_FLOWS.md](../docs/SYSTEM_FLOWS.md).
 
 ## Target Relational Model
 

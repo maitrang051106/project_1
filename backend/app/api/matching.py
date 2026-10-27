@@ -8,14 +8,10 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.conversation import Conversation
-from app.models.enums import (
-    ConversationType,
-    TargetCohort,
-    TargetGender,
-    TargetMajorFaculty,
-)
+from app.models.enums import ConversationType
 from app.models.profile import Profile
 from app.models.user import User
+from app.schemas.matching import MatchJoinIn
 from app.services.matching import (
     MatchPreferenceData,
     UserProfileData,
@@ -26,19 +22,13 @@ from app.services.store import store_service
 router = APIRouter(prefix="/match", tags=["matching"])
 
 
-class MatchJoinIn(BaseModel):
-    target_gender: str = Field(default=TargetGender.ANY.value)
-    target_major_faculty: str = Field(default=TargetMajorFaculty.ANY.value)
-    target_cohort: str = Field(default=TargetCohort.ANY.value)
-
-
 @router.post("/join")
 async def join_matching(
     payload: MatchJoinIn,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    # 1. Kiểm tra user đã hoàn thành hồ sơ chưa
+    # 1. Verify user has completed onboarding profile
     stmt = select(Profile).where(Profile.user_id == user.id)
     res = await db.execute(stmt)
     my_profile = res.scalar_one_or_none()
@@ -46,10 +36,10 @@ async def join_matching(
     if not my_profile:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Bạn cần hoàn tất khai báo hồ sơ (Onboarding) trước khi tham gia ghép cặp",
+            detail="Please complete your profile (Onboarding) before joining matchmaking.",
         )
 
-    # 2. Xóa kết quả ghép cũ nếu có
+    # 2. Clear previous match result if any
     await store_service.clear_match_result(user.id)
 
     my_profile_data = UserProfileData(
@@ -66,7 +56,7 @@ async def join_matching(
         target_cohort=payload.target_cohort,
     )
 
-    # 3. Quét các ứng viên đang chờ trong hàng đợi
+    # 3. Scan candidates waiting in queue
     candidates = await store_service.get_queue_candidates(exclude_user_id=user.id)
 
     matched_candidate = None
@@ -78,20 +68,20 @@ async def join_matching(
             matched_candidate = cand
             break
 
-    # 4. Nếu tìm thấy người thỏa mãn 3 ràng buộc hai chiều
+    # 4. If a mutual match satisfying all 3 hard constraints is found
     if matched_candidate:
         cand_user_id = matched_candidate["user_id"]
-        # Xóa người đó khỏi hàng đợi
+        # Remove matched user from queue
         await store_service.remove_from_queue(cand_user_id)
 
-        # Lấy thông tin đối phương để hiển thị
+        # Retrieve opponent info
         cand_user_res = await db.execute(
             select(User).where(User.id == cand_user_id).options(selectinload(User.profile))
         )
         cand_user = cand_user_res.scalar_one_or_none()
         cand_nickname = cand_user.nickname if cand_user else "Anonymous Partner"
 
-        # Tạo Conversation trong Database
+        # Create Conversation in Database
         conv = Conversation(
             user_a=user.id,
             user_b=cand_user_id,
@@ -101,7 +91,7 @@ async def join_matching(
         await db.commit()
         await db.refresh(conv)
 
-        # Lưu thông báo kết quả cho cả 2 phía
+        # Store match result notification for both participants
         await store_service.save_match_result(
             user_a_id=user.id,
             user_b_id=cand_user_id,
@@ -120,7 +110,7 @@ async def join_matching(
             },
         }
 
-    # 5. Nếu chưa có ai phù hợp, đưa vào hàng đợi
+    # 5. If no candidate matches, add user to waiting queue
     await store_service.add_to_queue(
         user_id=user.id,
         profile={
@@ -137,12 +127,12 @@ async def join_matching(
         },
     )
 
-    return {"status": "waiting", "message": "Đang tìm kiếm người phù hợp theo 3 tiêu chí của bạn..."}
+    return {"status": "waiting", "message": "Searching for a partner matching your 3 criteria..."}
 
 
 @router.get("/status")
 async def get_matching_status(user: User = Depends(get_current_user)) -> dict[str, Any]:
-    # Kiểm tra xem có người vừa ghép đôi thành công với mình chưa
+    # Check if someone matched with user
     match_result = await store_service.get_match_result(user.id)
     if match_result:
         return {
@@ -151,7 +141,7 @@ async def get_matching_status(user: User = Depends(get_current_user)) -> dict[st
             "partner": match_result.get("partner"),
         }
 
-    # Kiểm tra xem user có đang nằm trong hàng đợi không
+    # Check if user is currently in the waiting queue
     candidates = await store_service.get_queue_candidates(exclude_user_id=-1)
     is_waiting = any(c["user_id"] == user.id for c in candidates)
 
@@ -165,5 +155,5 @@ async def get_matching_status(user: User = Depends(get_current_user)) -> dict[st
 async def leave_matching(user: User = Depends(get_current_user)) -> dict[str, str]:
     await store_service.remove_from_queue(user.id)
     await store_service.clear_match_result(user.id)
-    return {"message": "Đã rời khỏi hàng đợi tìm kiếm"}
+    return {"message": "Left the matching queue."}
 

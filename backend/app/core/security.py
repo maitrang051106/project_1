@@ -54,7 +54,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_email_hash(email: str) -> str:
-    """Tạo HMAC-SHA256 băm email để bảo vệ danh tính, không lưu email thô."""
+    """Generate HMAC-SHA256 hash of email to protect identity without storing raw email."""
     norm = normalize_email(email)
     return hmac.new(
         settings.otp_secret.encode("utf-8"),
@@ -64,12 +64,12 @@ def create_email_hash(email: str) -> str:
 
 
 def generate_otp() -> str:
-    """Sinh mã OTP 6 chữ số ngẫu nhiên an toàn bằng secrets."""
+    """Generate secure random 6-digit OTP using secrets."""
     return "".join(secrets.choice("0123456789") for _ in range(6))
 
 
 def hash_otp(otp: str) -> str:
-    """Băm OTP bằng SHA256 trước khi lưu để bảo mật."""
+    """Hash OTP using SHA-256 before storing for security."""
     return hashlib.sha256(otp.encode("utf-8")).hexdigest()
 
 
@@ -82,7 +82,7 @@ def generate_default_nickname() -> str:
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    """Tạo JWT Token xác thực người dùng."""
+    """Create JWT access token for user authentication."""
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(seconds=settings.jwt_expire_seconds)
@@ -92,7 +92,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 
 
 def decode_access_token(token: str) -> dict | None:
-    """Giải mã và xác minh JWT Token."""
+    """Decode and verify JWT access token."""
     try:
         return jwt.decode(
             token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]

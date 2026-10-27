@@ -21,21 +21,11 @@ class MatchPreferenceData:
 
 def check_gender_match(pref_gender: str, candidate_gender: str) -> bool:
     """Check one-way gender preference."""
-    pref = pref_gender.lower()
-    cand = candidate_gender.lower()
-    # Normalize legacy values
-    if pref in (TargetGender.ANY.value, "bat_ki"):
+    pref = pref_gender.strip().lower()
+    cand = candidate_gender.strip().lower()
+
+    if pref == TargetGender.ANY.value:
         return True
-    if pref == "nam":
-        pref = TargetGender.MALE.value
-    elif pref == "nu":
-        pref = TargetGender.FEMALE.value
-
-    if cand == "nam":
-        cand = Gender.MALE.value
-    elif cand == "nu":
-        cand = Gender.FEMALE.value
-
     return pref == cand
 
 
@@ -47,14 +37,15 @@ def check_major_faculty_match(
     candidate_major: str,
 ) -> bool:
     """Check one-way major / faculty preference."""
-    pref = pref_major_faculty.lower()
-    if pref in (TargetMajorFaculty.ANY.value, "bat_ki"):
+    pref = pref_major_faculty.strip().lower()
+
+    if pref == TargetMajorFaculty.ANY.value:
         return True
-    if pref in (TargetMajorFaculty.SAME_MAJOR.value, "cung_nganh"):
+    if pref == TargetMajorFaculty.SAME_MAJOR.value:
         return my_major == candidate_major
-    if pref in (TargetMajorFaculty.SAME_FACULTY.value, "cung_truong_khac_nganh"):
+    if pref == TargetMajorFaculty.SAME_FACULTY.value:
         return (my_faculty == candidate_faculty) and (my_major != candidate_major)
-    if pref in (TargetMajorFaculty.DIFFERENT_FACULTY.value, "khac_truong"):
+    if pref == TargetMajorFaculty.DIFFERENT_FACULTY.value:
         return my_faculty != candidate_faculty
     return False
 
@@ -65,14 +56,15 @@ def check_cohort_match(
     candidate_cohort: int,
 ) -> bool:
     """Check one-way cohort preference."""
-    pref = pref_cohort.lower()
-    if pref in (TargetCohort.ANY.value, "bat_ki"):
+    pref = pref_cohort.strip().lower()
+
+    if pref == TargetCohort.ANY.value:
         return True
-    if pref in (TargetCohort.SAME_COHORT.value, "cung_khoa"):
+    if pref == TargetCohort.SAME_COHORT.value:
         return my_cohort == candidate_cohort
-    if pref in (TargetCohort.SENIOR.value, "khoa_tren"):
+    if pref == TargetCohort.SENIOR.value:
         return candidate_cohort < my_cohort
-    if pref in (TargetCohort.JUNIOR.value, "khoa_duoi"):
+    if pref == TargetCohort.JUNIOR.value:
         return candidate_cohort > my_cohort
     return False
 

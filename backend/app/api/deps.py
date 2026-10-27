@@ -21,14 +21,14 @@ async def get_current_user(
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Chưa đăng nhập",
+            detail="Not authenticated",
         )
 
     payload = decode_access_token(token)
     if not payload or "sub" not in payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Phiên đăng nhập không hợp lệ hoặc đã hết hạn",
+            detail="Invalid or expired session",
         )
 
     try:
@@ -36,7 +36,7 @@ async def get_current_user(
     except (ValueError, TypeError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Thông tin người dùng không hợp lệ",
+            detail="Invalid user information",
         )
 
     stmt = select(User).where(User.id == user_id).options(selectinload(User.profile))
@@ -46,13 +46,13 @@ async def get_current_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Tài khoản không tồn tại",
+            detail="Account does not exist",
         )
 
     if user.status == UserStatus.BANNED:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Tài khoản đã bị khóa",
+            detail="Account has been suspended",
         )
 
     return user

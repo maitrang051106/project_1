@@ -60,3 +60,29 @@ def test_jwt_token_flow() -> None:
     assert decoded is not None
     assert decoded["sub"] == "42"
     assert "exp" in decoded
+
+
+import pytest
+
+
+def test_build_otp_email_message() -> None:
+    from app.services.email_service import build_otp_email_message
+
+    msg = build_otp_email_message(
+        to_email="student@sis.hust.edu.vn",
+        otp="123456",
+        subject_prefix="Registration Code",
+    )
+
+    assert msg["To"] == "student@sis.hust.edu.vn"
+    assert "123456" in msg["Subject"]
+    assert "Registration Code" in msg["Subject"]
+    payload_text = msg.get_body(preferencelist=("plain",)).get_content()
+    assert "123456" in payload_text
+    assert "5 minutes" in payload_text
+
+    payload_html = msg.get_body(preferencelist=("html",)).get_content()
+    assert "123456" in payload_html
+    assert "HUST Student" in payload_html
+
+

@@ -93,7 +93,7 @@ Giữ ADR cũ để lưu lịch sử; quyết định mới hơn ghi rõ mục n
   1. Giới tính: nam / nữ / bất kì
   2. Ngành/Trường: cùng ngành / cùng trường khác ngành / khác trường / bất kì
   3. Khóa: khóa trên / khóa dưới / cùng khóa / bất kì
-- Cả hai người phải cùng thỏa mãn ràng buộc của nhau. Chi tiết tại `docs/QUESTIONNAIRE.md`.
+- Cả hai người phải cùng thỏa mãn ràng buộc của nhau. Chi tiết tại `docs/SYSTEM_FLOWS.md`.
 
 
 ## ADR-017: Authentication with Password, Strict SIS Email, Two-way Friend System & Persistent DMs
@@ -109,3 +109,11 @@ Giữ ADR cũ để lưu lịch sử; quyết định mới hơn ghi rõ mục n
   - Two-way "Add Friend" action: User A clicks "Add Friend", User B receives accept/decline prompt. On acceptance, both real emails are revealed in chat and recorded in `friendships` table.
 - **Messages Tab**:
   - 2-column layout: Left column lists friends; right column displays persistent direct messages stored in `direct_messages` table with real-time WebSocket updates.
+
+
+## ADR-018: Clean Architecture Refactoring, Tách Constants vs Config, Bỏ Auth Legacy
+- Ngày: 2026-10-28 | Trạng thái: Chấp nhận
+- Tách rõ ràng ranh giới giữa Constants (hằng số nghiệp vụ cố định) và Config (cấu hình môi trường).
+- Bí mật (Gmail App Password, OTP secret, JWT secret) chỉ được đọc từ .env / ackend/.env, không hardcode mặc định trong config.py.
+- Tách tầng Schemas (pp/schemas/) cho DTOs request/response; tách tầng Services (AuthService, EmailService) để rút gọn Routers thành tầng mỏng (Thin Controller).
+- Loại bỏ hoàn toàn 2 endpoint legacy /request-otp và /verify-otp để chuẩn hóa 1 luồng tài khoản duy nhất. Dùng email trực tiếp thay vì băm email trước DB.

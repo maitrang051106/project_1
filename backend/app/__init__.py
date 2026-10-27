@@ -1,1 +1,1 @@
-"""Ứng dụng backend HUST Chatbox."""
+"""HUST Chatbox backend application."""

@@ -5,7 +5,7 @@ from pathlib import Path
 
 @lru_cache(maxsize=1)
 def load_catalog() -> tuple[list[dict], dict[str, dict]]:
-    """Tải 68 ngành học HUST từ file CSV seed."""
+    """Load 68 HUST academic majors from CSV seed file."""
     catalog_path = Path(__file__).resolve().parents[3] / "db" / "seed" / "hust-68-nganh-2026.csv"
     
     majors = []
@@ -20,7 +20,7 @@ def load_catalog() -> tuple[list[dict], dict[str, dict]]:
                     "major_name": row["major_name"],
                     "faculty_code": row["faculty_code"],
                     "faculty_name": row["faculty_name"],
-                    "program_type": row.get("program_type", "Chuẩn"),
+                    "program_type": row.get("program_type", "Standard"),
                     "is_new_2026": row.get("is_new_2026", "FALSE").upper() == "TRUE",
                 }
                 majors.append(item)
@@ -31,13 +31,13 @@ def load_catalog() -> tuple[list[dict], dict[str, dict]]:
 
 
 def get_all_majors() -> list[dict]:
-    """Lấy danh sách tất cả ngành học HUST."""
+    """Retrieve all HUST academic majors."""
     majors, _ = load_catalog()
     return majors
 
 
 def get_major_by_code(code: str) -> dict | None:
-    """Tra cứu ngành học theo mã (ví dụ: 'IT1', 'EE2', 'BF1')."""
+    """Lookup major by code (e.g. 'IT1', 'EE2', 'BF1')."""
     _, major_map = load_catalog()
     return major_map.get(code.strip().upper())
 
