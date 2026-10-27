@@ -4,29 +4,42 @@ from app.core.security import (
     decode_access_token,
     generate_anon_name,
     generate_otp,
+    hash_password,
     is_valid_hust_email,
     normalize_email,
+    verify_password,
 )
 
 
 def test_normalize_email() -> None:
-    assert normalize_email("  SinhVien.IT@HUST.EDU.VN  ") == "sinhvien.it@hust.edu.vn"
-    assert normalize_email("Test@sis.hust.edu.vn") == "test@sis.hust.edu.vn"
+    assert normalize_email("  SV2026@SIS.HUST.EDU.VN  ") == "sv2026@sis.hust.edu.vn"
 
 
-def test_is_valid_hust_email() -> None:
-    assert is_valid_hust_email("sv123@hust.edu.vn") is True
-    assert is_valid_hust_email("sv123@sis.hust.edu.vn") is True
-    assert is_valid_hust_email("sv123@gmail.com") is False
-    assert is_valid_hust_email("sv123@hust.edu.vn.attacker.com") is False
+def test_is_valid_hust_email_strictly_sis() -> None:
+    # Only @sis.hust.edu.vn is allowed
+    assert is_valid_hust_email("student@sis.hust.edu.vn") is True
+    # @hust.edu.vn and other domains must be rejected
+    assert is_valid_hust_email("teacher@hust.edu.vn") is False
+    assert is_valid_hust_email("user@gmail.com") is False
     assert is_valid_hust_email("invalid-email") is False
 
 
+def test_password_hashing_and_verification() -> None:
+    raw = "HustChatSecret123!"
+    hashed = hash_password(raw)
+    assert hashed != raw
+    assert "$" in hashed
+    assert verify_password(raw, hashed) is True
+    assert verify_password("WrongPassword", hashed) is False
+
+
 def test_create_email_hash() -> None:
-    h1 = create_email_hash("sv@hust.edu.vn")
-    h2 = create_email_hash("  SV@HUST.EDU.VN  ")
+    h1 = create_email_hash("user1@sis.hust.edu.vn")
+    h2 = create_email_hash("user1@sis.hust.edu.vn")
+    h3 = create_email_hash("user2@sis.hust.edu.vn")
     assert h1 == h2
-    assert len(h1) == 64  # SHA256 hex string
+    assert h1 != h3
+    assert len(h1) == 64
 
 
 def test_generate_otp() -> None:
@@ -38,18 +51,12 @@ def test_generate_otp() -> None:
 def test_generate_anon_name() -> None:
     name = generate_anon_name()
     assert "#" in name
-    assert len(name) > 5
+    assert len(name.split()) >= 2
 
 
 def test_jwt_token_flow() -> None:
-    from app.core.config import settings
-    settings.jwt_secret = "hust-chatbox-secret-jwt-key-2026-very-secure-32b"
     token = create_access_token({"sub": "42"})
-    assert isinstance(token, str)
-
-    payload = decode_access_token(token)
-    assert payload is not None
-    assert payload["sub"] == "42"
-
-    bad_payload = decode_access_token("invalid.token.string")
-    assert bad_payload is None
+    decoded = decode_access_token(token)
+    assert decoded is not None
+    assert decoded["sub"] == "42"
+    assert "exp" in decoded

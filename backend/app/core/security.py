@@ -7,34 +7,50 @@ import secrets
 import jwt
 
 from app.core.config import settings
+from app.core.constants import ALLOWED_EMAIL_DOMAINS
 
-ALLOWED_DOMAINS = ("hust.edu.vn", "sis.hust.edu.vn")
+ALLOWED_DOMAINS = ALLOWED_EMAIL_DOMAINS
 
 ANON_ADJECTIVES = [
-    "Dũng Cảm", "Nhiệt Huyết", "Thầm Lặng", "Thức Khuya", "Yêu Đời",
-    "Chăm Chỉ", "Bí Ẩn", "Lãng Tử", "Tinh Nghịch", "Thông Thái",
-    "Bá Đạo", "Bình Yên", "Mơ Mộng", "Tốc Độ", "Kiên Cường"
+    "Brave", "Curious", "Silent", "Midnight", "Cheerful",
+    "Diligent", "Mystic", "Clever", "Swift", "Resilient"
 ]
 
 ANON_NOUNS = [
-    "Cú Đêm", "Bách Khoa", "Chim Én", "Hải Âu", "Gấu Nâu",
-    "Kỹ Sư", "Lập Trình Viên", "Chiến Binh", "Học Giả", "Đồng Tu",
-    "Nhà Thơ", "Thám Tử", "Thần Đồng", "Sư Huynh", "Sư Muội"
+    "Owl", "Phoenix", "Sparrow", "Falcon", "Panda",
+    "Engineer", "Coder", "Scholar", "Explorer", "Seeker"
 ]
 
 
 def normalize_email(email: str) -> str:
-    """Chuẩn hóa email: viết thường, loại bỏ khoảng trắng."""
+    """Normalize email: lowercase and strip whitespace."""
     return email.strip().lower()
 
 
 def is_valid_hust_email(email: str) -> bool:
-    """Kiểm tra domain email có thuộc trường HUST hay không (@hust.edu.vn hoặc @sis.hust.edu.vn)."""
+    """Check if email belongs to HUST SIS domain (@sis.hust.edu.vn only)."""
     norm = normalize_email(email)
     if "@" not in norm:
         return False
     domain = norm.split("@")[-1]
     return domain in ALLOWED_DOMAINS
+
+
+def hash_password(password: str) -> str:
+    """Hash password using PBKDF2-HMAC-SHA256 with random 16-byte salt."""
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000)
+    return f"{salt}${dk.hex()}"
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify plain password against PBKDF2 hash."""
+    try:
+        salt, expected_hash = hashed_password.split("$", 1)
+        dk = hashlib.pbkdf2_hmac("sha256", plain_password.encode("utf-8"), salt.encode("utf-8"), 100000)
+        return hmac.compare_digest(dk.hex(), expected_hash)
+    except Exception:
+        return False
 
 
 def create_email_hash(email: str) -> str:

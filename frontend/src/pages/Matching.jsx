@@ -1,19 +1,24 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
+import {
+  TARGET_COHORT_OPTIONS,
+  TARGET_GENDER_OPTIONS,
+  TARGET_MAJOR_FACULTY_OPTIONS,
+} from "../lib/constants";
 
 export default function Matching() {
   const navigate = useNavigate();
 
-  const [targetGender, setTargetGender] = useState("bat_ki");
-  const [targetMajorFaculty, setTargetMajorFaculty] = useState("bat_ki");
-  const [targetCohort, setTargetCohort] = useState("bat_ki");
+  const [targetGender, setTargetGender] = useState(TARGET_GENDER_OPTIONS[0].id);
+  const [targetMajorFaculty, setTargetMajorFaculty] = useState(TARGET_MAJOR_FACULTY_OPTIONS[0].id);
+  const [targetCohort, setTargetCohort] = useState(TARGET_COHORT_OPTIONS[0].id);
 
   const [isSearching, setIsSearching] = useState(false);
   const [searchTimer, setSearchTimer] = useState(0);
   const [error, setError] = useState("");
 
-  // Polling trạng thái khi đang ở hàng đợi
+  // Polling queue status
   useEffect(() => {
     let interval;
     if (isSearching) {
@@ -35,7 +40,7 @@ export default function Matching() {
     return () => clearInterval(interval);
   }, [isSearching, navigate]);
 
-  // Bộ đếm thời gian tìm kiếm
+  // Search timer
   useEffect(() => {
     let t;
     if (isSearching) {
@@ -62,7 +67,7 @@ export default function Matching() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.detail || "Không thể tham gia hàng đợi");
+        throw new Error(data.detail || "Unable to join matching queue");
       }
 
       if (data.status === "matched" && data.room_id) {
@@ -89,10 +94,10 @@ export default function Matching() {
     <div className="mx-auto max-w-lg rounded-2xl bg-white p-8 shadow-sm border border-slate-100">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Ghép cặp trò chuyện ẩn danh
+          Anonymous Match
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Chọn 3 tiêu chí bạn mong muốn ở đối phương
+          Set your 3 mutual preference filters to find a HUST conversation partner
         </p>
       </div>
 
@@ -102,112 +107,73 @@ export default function Matching() {
         </div>
       )}
 
-      {isSearching ? (
-        <div className="py-12 text-center space-y-6">
-          <div className="relative mx-auto flex h-24 w-24 items-center justify-center">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
-            <div className="relative inline-flex h-20 w-20 items-center justify-center rounded-full bg-red-700 text-3xl text-white shadow-lg">
-              🔍
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">
-              Đang tìm kiếm người phù hợp...
-            </h3>
-            <p className="text-sm text-slate-500 mt-1">
-              Thời gian chờ: <span className="font-mono font-bold text-red-700">{searchTimer}s</span>
-            </p>
-          </div>
-
-          <button
-            onClick={handleCancelMatch}
-            type="button"
-            className="rounded-xl border border-slate-300 px-6 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
-          >
-            Hủy tìm kiếm
-          </button>
-        </div>
-      ) : (
+      {!isSearching ? (
         <form onSubmit={handleStartMatch} className="space-y-6">
-          {/* Tiêu chí 1: Giới tính */}
+          {/* Target Gender */}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">
-              1. Giới tính mong muốn
+              1. Looking for Gender
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: "bat_ki", label: "✨ Bất kì" },
-                { id: "nam", label: "👨 Nam" },
-                { id: "nu", label: "👩 Nữ" },
-              ].map((opt) => (
+              {TARGET_GENDER_OPTIONS.map((item) => (
                 <button
                   type="button"
-                  key={opt.id}
-                  onClick={() => setTargetGender(opt.id)}
-                  className={`rounded-xl border py-2.5 text-center text-sm font-medium transition ${
-                    targetGender === opt.id
-                      ? "border-red-600 bg-red-50 text-red-700 ring-2 ring-red-600"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                  key={item.id}
+                  onClick={() => setTargetGender(item.id)}
+                  className={`flex flex-col items-center justify-center rounded-xl border p-3 text-xs font-medium transition ${
+                    targetGender === item.id
+                      ? "border-red-700 bg-red-50/50 text-red-700 font-semibold shadow-sm"
+                      : "border-slate-200 text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  {opt.label}
+                  <span className="text-lg mb-1">{item.icon}</span>
+                  <span>{item.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Tiêu chí 2: Ngành / Trường */}
+          {/* Target Major / Faculty */}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">
-              2. Tiêu chí Ngành / Trường
+              2. Major / School
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: "bat_ki", label: "🌐 Bất kì" },
-                { id: "cung_nganh", label: "🎯 Cùng ngành" },
-                { id: "cung_truong_khac_nganh", label: "🏫 Cùng trường (khác ngành)" },
-                { id: "khac_truong", label: "🚀 Khác trường/viện" },
-              ].map((opt) => (
+              {TARGET_MAJOR_FACULTY_OPTIONS.map((item) => (
                 <button
                   type="button"
-                  key={opt.id}
-                  onClick={() => setTargetMajorFaculty(opt.id)}
-                  className={`rounded-xl border p-3 text-left text-xs font-medium transition ${
-                    targetMajorFaculty === opt.id
-                      ? "border-red-600 bg-red-50 text-red-700 ring-2 ring-red-600"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                  key={item.id}
+                  onClick={() => setTargetMajorFaculty(item.id)}
+                  className={`rounded-xl border p-3 text-xs font-medium text-left transition ${
+                    targetMajorFaculty === item.id
+                      ? "border-red-700 bg-red-50/50 text-red-700 font-semibold shadow-sm"
+                      : "border-slate-200 text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  {opt.label}
+                  {item.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Tiêu chí 3: Khóa */}
+          {/* Target Cohort */}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">
-              3. Tiêu chí Khóa học
+              3. Cohort (Batch)
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: "bat_ki", label: "🎲 Bất kì" },
-                { id: "cung_khoa", label: "🤝 Cùng khóa" },
-                { id: "khoa_tren", label: "🎓 Khóa trên (Tiền bối)" },
-                { id: "khoa_duoi", label: "🌱 Khóa dưới (Hậu bối)" },
-              ].map((opt) => (
+              {TARGET_COHORT_OPTIONS.map((item) => (
                 <button
                   type="button"
-                  key={opt.id}
-                  onClick={() => setTargetCohort(opt.id)}
-                  className={`rounded-xl border p-3 text-left text-xs font-medium transition ${
-                    targetCohort === opt.id
-                      ? "border-red-600 bg-red-50 text-red-700 ring-2 ring-red-600"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                  key={item.id}
+                  onClick={() => setTargetCohort(item.id)}
+                  className={`rounded-xl border p-3 text-xs font-medium text-left transition ${
+                    targetCohort === item.id
+                      ? "border-red-700 bg-red-50/50 text-red-700 font-semibold shadow-sm"
+                      : "border-slate-200 text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  {opt.label}
+                  {item.label}
                 </button>
               ))}
             </div>
@@ -215,11 +181,36 @@ export default function Matching() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-red-700 py-3.5 text-sm font-semibold text-white shadow-md hover:bg-red-800 transition"
+            className="w-full rounded-xl bg-red-700 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-800 transition"
           >
-            Bắt đầu tìm kiếm đối phương
+            Start Matching
           </button>
         </form>
+      ) : (
+        /* Radar Animation Screen */
+        <div className="flex flex-col items-center justify-center py-10">
+          <div className="relative flex h-36 w-36 items-center justify-center">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-200 opacity-75" />
+            <span className="absolute inline-flex h-24 w-24 animate-pulse rounded-full bg-red-100 opacity-75" />
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-red-700 text-2xl text-white shadow-md">
+              ⚡
+            </div>
+          </div>
+
+          <h3 className="mt-6 text-lg font-bold text-slate-900">
+            Finding a matching peer...
+          </h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Searching for students matching your criteria ({searchTimer}s)
+          </p>
+
+          <button
+            onClick={handleCancelMatch}
+            className="mt-8 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+          >
+            Cancel Search
+          </button>
+        </div>
       )}
     </div>
   );

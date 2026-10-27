@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.constants import MAX_COHORT, MIN_COHORT
 from app.core.db import get_db
 from app.models.enums import Gender
 from app.models.profile import Profile
@@ -15,14 +16,16 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 
 
 class ProfileSubmitIn(BaseModel):
-    gender: str = Field(..., description="'nam' hoặc 'nu'")
-    major_code: str = Field(..., description="Mã ngành HUST, ví dụ 'IT1', 'EE2'")
-    cohort: int = Field(..., ge=63, le=71, description="Khóa sinh viên, từ K63 đến K71")
+    gender: str = Field(..., description="'nam' or 'nu'")
+    major_code: str = Field(..., description="HUST major code, e.g. 'IT1', 'EE2'")
+    cohort: int = Field(..., ge=MIN_COHORT, le=MAX_COHORT, description=f"Student cohort, from K{MIN_COHORT} to K{MAX_COHORT}")
+    anon_name: str | None = Field(default=None, description="Custom nickname")
+    avatar: str | None = Field(default=None, description="Custom avatar emoji")
 
 
 @router.get("/catalog")
 async def get_catalog() -> list[dict[str, Any]]:
-    """Lấy danh mục 68 ngành học và các Trường/Viện trực thuộc HUST."""
+    """Retrieve 68 HUST majors catalog."""
     return get_all_majors()
 
 
@@ -37,7 +40,7 @@ async def get_my_profile(
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Người dùng chưa hoàn thành khai báo hồ sơ (Onboarding)",
+            detail="User profile not completed yet.",
         )
 
     major_info = get_major_by_code(profile.major_code)
@@ -66,7 +69,7 @@ async def create_or_update_profile(
     if gender not in (Gender.NAM.value, Gender.NU.value):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Giới tính chỉ chấp nhận 'nam' hoặc 'nu'",
+            detail="Gender must be 'nam' (Male) or 'nu' (Female).",
         )
 
     major_code = payload.major_code.strip().upper()
@@ -74,10 +77,16 @@ async def create_or_update_profile(
     if not major_info:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Mã ngành '{major_code}' không tồn tại trong danh mục 68 ngành HUST",
+            detail=f"Major code '{major_code}' not found in HUST catalog.",
         )
 
     faculty_code = major_info["faculty_code"]
+
+    # Update nickname and avatar if provided
+    if payload.anon_name and payload.anon_name.strip():
+        user.anon_name = payload.anon_name.strip()
+    if payload.avatar and payload.avatar.strip():
+        user.avatar = payload.avatar.strip()
 
     stmt = select(Profile).where(Profile.user_id == user.id)
     res = await db.execute(stmt)
@@ -99,18 +108,17 @@ async def create_or_update_profile(
         profile.cohort = payload.cohort
 
     await db.commit()
-    await db.refresh(profile)
 
     return {
-        "message": "Cập nhật hồ sơ thành công",
+        "message": "Profile updated successfully.",
         "profile": {
-            "user_id": profile.user_id,
             "gender": profile.gender,
             "faculty_code": profile.faculty_code,
-            "faculty_name": major_info["faculty_name"],
             "major_code": profile.major_code,
-            "major_name": major_info["major_name"],
             "cohort": profile.cohort,
         },
+        "user": {
+            "anon_name": user.anon_name,
+            "avatar": user.avatar,
+        },
     }
-

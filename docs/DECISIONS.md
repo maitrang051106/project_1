@@ -94,3 +94,18 @@ Giữ ADR cũ để lưu lịch sử; quyết định mới hơn ghi rõ mục n
   2. Ngành/Trường: cùng ngành / cùng trường khác ngành / khác trường / bất kì
   3. Khóa: khóa trên / khóa dưới / cùng khóa / bất kì
 - Cả hai người phải cùng thỏa mãn ràng buộc của nhau. Chi tiết tại `docs/QUESTIONNAIRE.md`.
+
+
+## ADR-017: Authentication with Password, Strict SIS Email, Two-way Friend System & Persistent DMs
+- Date: 2026-10-27 | Status: Accepted
+- **Email domain restriction**: Only `@sis.hust.edu.vn` allowed (removed `@hust.edu.vn`).
+- **Account Registration & Login**:
+  - Sign Up: Email $\to$ OTP verification $\to$ Password creation (PBKDF2-HMAC-SHA256 with 100,000 iterations). Auto-login upon registration.
+  - Sign In: Email + Password authentication.
+  - Password Reset: Email $\to$ OTP $\to$ New password.
+- **Identity & UI**: User-selectable custom nicknames and avatar emojis (🦉, 🐱, 🐸, 🐶, 🐵, 🐰, 🐻, 🐧, 🐹, 🦊, 🐼). Entire UI localized in English.
+- **Anonymous Chat & Friend System**:
+  - Chat displays opponent's avatar and nickname, with real email hidden.
+  - Two-way "Add Friend" action: User A clicks "Add Friend", User B receives accept/decline prompt. On acceptance, both real emails are revealed in chat and recorded in `friendships` table.
+- **Messages Tab**:
+  - 2-column layout: Left column lists friends; right column displays persistent direct messages stored in `direct_messages` table with real-time WebSocket updates.

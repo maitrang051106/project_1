@@ -1,22 +1,30 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
-
-const COMMON_COHORTS = [63, 64, 65, 66, 67, 68, 69, 70, 71];
+import { useAuthStore } from "../store/auth";
+import {
+  AVATAR_OPTIONS,
+  COHORTS,
+  DEFAULT_AVATAR,
+  DEFAULT_COHORT,
+  GENDER_OPTIONS,
+} from "../lib/constants";
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { user, setUser } = useAuthStore();
 
-  const [gender, setGender] = useState("nam");
+  const [nickname, setNickname] = useState(user?.anon_name || "");
+  const [avatar, setAvatar] = useState(user?.avatar || DEFAULT_AVATAR);
+  const [gender, setGender] = useState(GENDER_OPTIONS[0].value);
   const [majorCode, setMajorCode] = useState("");
-  const [cohort, setCohort] = useState(68);
+  const [cohort, setCohort] = useState(DEFAULT_COHORT);
   const [catalog, setCatalog] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Tải danh mục ngành từ backend
     apiFetch("/profile/catalog")
       .then((res) => res.json())
       .then((data) => {
@@ -44,7 +52,7 @@ export default function Onboarding() {
     setError("");
 
     if (!majorCode) {
-      setError("Vui lòng chọn ngành học của bạn");
+      setError("Please select your major");
       return;
     }
 
@@ -56,12 +64,23 @@ export default function Onboarding() {
           gender,
           major_code: majorCode,
           cohort: Number(cohort),
+          anon_name: nickname.trim() || undefined,
+          avatar,
         }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.detail || "Không thể lưu thông tin hồ sơ");
+        throw new Error(data.detail || "Unable to save profile");
+      }
+
+      // Update auth store
+      if (user) {
+        setUser({
+          ...user,
+          anon_name: nickname.trim() || user.anon_name,
+          avatar: avatar || user.avatar,
+        });
       }
 
       navigate("/matching");
@@ -76,13 +95,13 @@ export default function Onboarding() {
     <div className="mx-auto max-w-lg rounded-2xl bg-white p-8 shadow-sm border border-slate-100">
       <div className="mb-6">
         <span className="inline-block rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-          Bước 2 / 2
+          Setup Profile
         </span>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-          Hoàn tất hồ sơ ẩn danh
+          Your Profile & Matching Info
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Thông tin này chỉ dùng để thuật toán ghép cặp tìm bạn chat phù hợp nhất
+          Personalize your appearance and let our engine match you with the right HUST peers
         </p>
       </div>
 
@@ -93,94 +112,134 @@ export default function Onboarding() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Câu hỏi 1: Giới tính */}
-        <div>
-          <label className="block text-sm font-semibold text-slate-900 mb-2">
-            1. Bạn là?
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setGender("nam")}
-              className={`rounded-xl border py-3 px-4 text-center font-medium transition ${
-                gender === "nam"
-                  ? "border-red-600 bg-red-50 text-red-700 ring-2 ring-red-600"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-              }`}
-            >
-              👨 Nam
-            </button>
-            <button
-              type="button"
-              onClick={() => setGender("nu")}
-              className={`rounded-xl border py-3 px-4 text-center font-medium transition ${
-                gender === "nu"
-                  ? "border-red-600 bg-red-50 text-red-700 ring-2 ring-red-600"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-              }`}
-            >
-              👩 Nữ
-            </button>
+        {/* Nickname & Avatar */}
+        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Your Nickname
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Midnight Coder"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Pick Your Avatar Emoji
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {AVATAR_OPTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => setAvatar(emoji)}
+                  className={`h-9 w-9 rounded-xl text-lg flex items-center justify-center border transition ${
+                    avatar === emoji
+                      ? "border-red-700 bg-red-100 scale-110 shadow-sm"
+                      : "border-slate-200 bg-white hover:bg-slate-100"
+                  }`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Câu hỏi 2: Ngành học */}
+        {/* Question 1: Gender */}
         <div>
-          <label className="block text-sm font-semibold text-slate-900 mb-1">
-            2. Ngành học của bạn tại HUST
+          <label className="block text-sm font-semibold text-slate-900 mb-2">
+            1. Your Gender
           </label>
-          <input
-            type="text"
-            placeholder="Tìm theo mã (IT1) hoặc tên ngành..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="mb-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:border-red-600 focus:outline-none"
-          />
-          <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
-            {filteredMajors.map((item) => (
-              <label
-                key={item.major_code}
-                className={`flex items-start gap-3 p-3 cursor-pointer transition ${
-                  majorCode === item.major_code ? "bg-red-50" : "hover:bg-slate-50"
+          <div className="grid grid-cols-2 gap-3">
+            {GENDER_OPTIONS.map((g) => (
+              <button
+                key={g.value}
+                type="button"
+                onClick={() => setGender(g.value)}
+                className={`flex items-center justify-center gap-2 rounded-xl border p-3.5 text-sm font-medium transition ${
+                  gender === g.value
+                    ? "border-red-700 bg-red-50/50 text-red-700 font-semibold"
+                    : "border-slate-200 text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="major"
-                  value={item.major_code}
-                  checked={majorCode === item.major_code}
-                  onChange={() => setMajorCode(item.major_code)}
-                  className="mt-1 text-red-600 focus:ring-red-600"
-                />
-                <div className="text-sm">
-                  <div className="font-medium text-slate-900">
-                    <span className="font-mono text-red-700 font-bold mr-1">
-                      [{item.major_code}]
-                    </span>{" "}
-                    {item.major_name}
-                  </div>
-                  <div className="text-xs text-slate-500">{item.faculty_name}</div>
-                </div>
-              </label>
+                <span>{g.icon}</span>
+                <span>{g.label}</span>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Câu hỏi 3: Khóa */}
+        {/* Question 2: Major */}
         <div>
-          <label className="block text-sm font-semibold text-slate-900 mb-2">
-            3. Khóa sinh viên của bạn
+          <label className="block text-sm font-semibold text-slate-900 mb-1">
+            2. Your Major (HUST)
           </label>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-            {COMMON_COHORTS.map((c) => (
+          <p className="text-xs text-slate-500 mb-2">
+            Choose from 68 official majors across HUST schools and institutes
+          </p>
+
+          <input
+            type="text"
+            placeholder="Type to search major (e.g. IT1, EE2, Computer Science)..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="mb-2 w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+          />
+
+          <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white">
+            {filteredMajors.length === 0 ? (
+              <div className="p-3 text-center text-xs text-slate-500">
+                No matching majors found
+              </div>
+            ) : (
+              filteredMajors.map((m) => (
+                <button
+                  type="button"
+                  key={m.major_code}
+                  onClick={() => setMajorCode(m.major_code)}
+                  className={`w-full text-left p-3 text-xs transition flex items-center justify-between ${
+                    majorCode === m.major_code
+                      ? "bg-red-50/70 font-semibold text-red-800"
+                      : "hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  <div>
+                    <span className="font-bold mr-2 text-red-700">[{m.major_code}]</span>
+                    <span>{m.major_name}</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">
+                    {m.faculty_name}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Question 3: Cohort */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-900 mb-1">
+            3. Your Cohort (K63 - K71)
+          </label>
+          <p className="text-xs text-slate-500 mb-2">
+            Select your academic batch from K63 to K71
+          </p>
+
+          <div className="grid grid-cols-5 gap-2">
+            {COHORTS.map((c) => (
               <button
                 type="button"
                 key={c}
                 onClick={() => setCohort(c)}
-                className={`rounded-xl border py-2 text-center text-sm font-medium transition ${
+                className={`rounded-xl border py-2.5 text-xs font-semibold transition ${
                   cohort === c
-                    ? "border-red-600 bg-red-50 text-red-700 ring-2 ring-red-600"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                    ? "border-red-700 bg-red-700 text-white shadow-sm"
+                    : "border-slate-200 text-slate-700 hover:bg-slate-50"
                 }`}
               >
                 K{c}
@@ -189,12 +248,13 @@ export default function Onboarding() {
           </div>
         </div>
 
+        {/* Submit */}
         <button
           type="submit"
           disabled={loading || !majorCode}
           className="w-full rounded-xl bg-red-700 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:opacity-50 transition"
         >
-          {loading ? "Đang lưu..." : "Bắt đầu ghép cặp"}
+          {loading ? "Saving Profile..." : "Complete Profile & Start Matching"}
         </button>
       </form>
     </div>
