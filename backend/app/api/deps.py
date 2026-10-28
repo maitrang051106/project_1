@@ -1,12 +1,34 @@
-from fastapi import Cookie, Depends, Header, HTTPException, status
+from fastapi import Cookie, Depends, Header, HTTPException, Request, WebSocket, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.db import get_db
 from app.core.security import decode_access_token
 from app.models.enums import UserStatus
 from app.models.user import User
+from app.services.store import store_service
+
+
+def get_client_ip(request: Request | WebSocket) -> str:
+    """Extract client IP safely from trusted reverse proxy or direct socket."""
+    trusted = [
+        p.strip() for p in getattr(settings, "trusted_proxies", "127.0.0.1,::1").split(",")
+    ]
+    client_host = request.client.host if request.client else "127.0.0.1"
+
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for and (client_host in trusted or "127.0.0.1" in trusted):
+        client_ip = forwarded_for.split(",")[0].strip()
+        if client_ip:
+            return client_ip
+
+    return client_host
+
+
+def is_allowed_websocket_origin(origin: str | None) -> bool:
+    return origin is not None and origin in settings.allowed_origins
 
 
 async def get_current_user(
@@ -37,6 +59,13 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid user information",
+        )
+
+    jti = payload.get("jti")
+    if not jti or not await store_service.is_session_active(user_id, jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has been revoked or expired",
         )
 
     stmt = select(User).where(User.id == user_id).options(selectinload(User.profile))

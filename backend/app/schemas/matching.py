@@ -17,7 +17,9 @@ class PartnerInfo(BaseModel):
 
 
 class MatchResultOut(BaseModel):
-    status: str
+    status: str  # "waiting" | "matched" | "not_found" | "idle"
+    attempt_id: str | None = None
     room_id: int | None = None
     partner: PartnerInfo | None = None
     message: str | None = None
+    elapsed_seconds: int | None = None

@@ -54,10 +54,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_email_hash(email: str) -> str:
-    """Generate HMAC-SHA256 hash of email to protect identity without storing raw email."""
+    """Generate HMAC-SHA256 hash of email for indexing/lookup using EMAIL_HASH_SECRET."""
     norm = normalize_email(email)
+    secret = getattr(settings, "email_hash_secret", None) or settings.otp_secret
     return hmac.new(
-        settings.otp_secret.encode("utf-8"),
+        secret.encode("utf-8"),
         norm.encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
@@ -68,9 +69,19 @@ def generate_otp() -> str:
     return "".join(secrets.choice("0123456789") for _ in range(6))
 
 
-def hash_otp(otp: str) -> str:
-    """Hash OTP using SHA-256 before storing for security."""
-    return hashlib.sha256(otp.encode("utf-8")).hexdigest()
+def hash_otp(otp: str, purpose: str = "register") -> str:
+    """Compute keyed HMAC-SHA256 of OTP with domain separation using OTP_SECRET."""
+    message = f"hust:otp:{purpose}:{otp.strip()}"
+    return hmac.new(
+        settings.otp_secret.encode("utf-8"),
+        message.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def compare_otp_hash(candidate: str, expected: str) -> bool:
+    """Constant-time comparison of OTP hashes."""
+    return hmac.compare_digest(candidate, expected)
 
 
 def generate_default_nickname() -> str:
@@ -84,7 +95,10 @@ def generate_default_nickname() -> str:
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Create JWT access token for user authentication."""
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (
+    to_encode["jti"] = secrets.token_urlsafe(24)
+    now = datetime.now(timezone.utc)
+    to_encode["iat"] = int(now.timestamp())
+    expire = now + (
         expires_delta or timedelta(seconds=settings.jwt_expire_seconds)
     )
     to_encode.update({"exp": expire})

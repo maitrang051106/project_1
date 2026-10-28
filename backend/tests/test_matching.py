@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.models.enums import Gender, TargetCohort, TargetGender, TargetMajorFaculty
 from app.services.matching import (
     MatchPreferenceData,
@@ -5,7 +7,9 @@ from app.services.matching import (
     check_cohort_match,
     check_gender_match,
     check_major_faculty_match,
+    daily_match_limit,
     is_mutual_match,
+    vietnam_day_utc_window,
 )
 
 
@@ -165,3 +169,51 @@ def test_mutual_match_self_fails() -> None:
     user_a = UserProfileData(user_id=1, gender="male", faculty_code="SOICT", major_code="IT1", cohort=68)
     pref_a = MatchPreferenceData()
     assert is_mutual_match(user_a, pref_a, user_a, pref_a) is False
+
+
+def test_daily_match_limit_follows_trust_score_bands() -> None:
+    assert daily_match_limit(100) is None
+    assert daily_match_limit(90) is None
+    assert daily_match_limit(89) == 5
+    assert daily_match_limit(70) == 5
+    assert daily_match_limit(69) == 3
+    assert daily_match_limit(50) == 3
+    assert daily_match_limit(49) == 1
+    assert daily_match_limit(1) == 1
+    assert daily_match_limit(0) == 0
+    assert daily_match_limit(-1) == 0
+
+
+def test_vietnam_day_utc_window_uses_utc_plus_seven() -> None:
+    now = datetime(2026, 10, 28, 18, 30, tzinfo=timezone.utc)
+
+    start, end = vietnam_day_utc_window(now)
+
+    assert start == datetime(2026, 10, 28, 17, 0)
+    assert end == datetime(2026, 10, 29, 17, 0)
+
+
+def test_match_result_out_contract() -> None:
+    from app.schemas.matching import MatchResultOut
+
+    # Terminal not_found state contract
+    not_found_res = MatchResultOut(
+        status="not_found",
+        attempt_id="att_uuid_456",
+        elapsed_seconds=60,
+    )
+    assert not_found_res.status == "not_found"
+    assert not_found_res.attempt_id == "att_uuid_456"
+    assert not_found_res.elapsed_seconds == 60
+    assert not_found_res.room_id is None
+
+    # Matched state contract
+    matched_res = MatchResultOut(
+        status="matched",
+        room_id=999,
+        attempt_id="att_uuid_456",
+    )
+    assert matched_res.status == "matched"
+    assert matched_res.room_id == 999
+    assert matched_res.attempt_id == "att_uuid_456"
+

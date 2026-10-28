@@ -70,3 +70,19 @@ def test_conversation_schema_and_relationships() -> None:
     assert conv_columns["type"].type.enums == ["human", "bot"]
     assert ConversationType.HUMAN.value == "human"
     assert ConversationType.BOT.value == "bot"
+
+
+def test_friendship_response_requires_pending_request_from_other_user() -> None:
+    friendship = Friendship(
+        user_a=3,
+        user_b=8,
+        requested_by=3,
+        status="pending",
+    )
+
+    assert friendship.can_be_responded_to_by(responder_id=8, requester_id=3)
+    assert not friendship.can_be_responded_to_by(responder_id=3, requester_id=3)
+    assert not friendship.can_be_responded_to_by(responder_id=8, requester_id=8)
+
+    friendship.status = "declined"
+    assert not friendship.can_be_responded_to_by(responder_id=8, requester_id=3)

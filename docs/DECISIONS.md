@@ -117,3 +117,37 @@ Giữ ADR cũ để lưu lịch sử; quyết định mới hơn ghi rõ mục n
 - Bí mật (Gmail App Password, OTP secret, JWT secret) chỉ được đọc từ .env / ackend/.env, không hardcode mặc định trong config.py.
 - Tách tầng Schemas (pp/schemas/) cho DTOs request/response; tách tầng Services (AuthService, EmailService) để rút gọn Routers thành tầng mỏng (Thin Controller).
 - Loại bỏ hoàn toàn 2 endpoint legacy /request-otp và /verify-otp để chuẩn hóa 1 luồng tài khoản duy nhất. Dùng email trực tiếp thay vì băm email trước DB.
+
+
+## ADR-019: Fail-fast secrets, consent-based friendship và giới hạn matching
+- Ngày: 2026-10-28 | Trạng thái: Chấp nhận
+- Production không dùng giá trị secret cố định trong source; `OTP_SECRET`,
+  `EMAIL_HASH_SECRET`, `JWT_SECRET`, `DATABASE_URL` và `REDIS_URL` phải được
+  khai báo. Dev sinh secret tạm thời riêng cho mỗi process nếu thiếu.
+- Friendship phải có lời mời `pending` với `requested_by`; chỉ người nhận lời
+  mời hiện hành được accept/decline. Chỉ khi accept mới đổi sang `accepted` và
+  tiết lộ email.
+- Login giới hạn 10 lần thử cho mỗi HMAC email trong 15 phút; không khóa tài
+  khoản dài hạn để giảm nguy cơ DoS.
+- Quota matching theo trust score/ngày Việt Nam: `>=90` không giới hạn,
+  `70-89` tối đa 5, `50-69` tối đa 3, `1-49` tối đa 1, `<=0` không được match.
+  Mỗi user chỉ có một conversation đang hoạt động.
+- Cookie WebSocket chỉ chấp nhận Origin thuộc allowlist cấu hình; đây là kiểm
+  tra độc lập với CORS.
+
+
+## ADR-020: Redis Outage Fail-Fast, Session Revocation, and WebSocket Rate Limits
+- Ngày: 2026-10-28 | Trạng thái: Chấp nhận
+- **Redis Outage Handling**:
+  - Ở production (`ENVIRONMENT=production`), khi Redis gặp sự cố hoặc mất kết nối, hệ thống không tự ý fallback về in-memory (vì mô hình cluster/đa worker trên Render sẽ gây phân mảnh state, mất tin nhắn Pub/Sub và hỏng hàng đợi matching). Thay vào đó, hệ thống fail-fast trả về **HTTP 503 Service Unavailable** (`RedisUnavailable`).
+  - Ở dev/test (`ENVIRONMENT!=production`), hệ thống tiếp tục hỗ trợ in-memory fallback mượt mà cho phát triển offline.
+- **Session Revocation (Thu hồi phiên JWT)**:
+  - Token JWT phát hành đều kèm claim `jti` duy nhất.
+  - Khi người dùng đăng xuất (`POST /auth/logout`): xóa session tương ứng khỏi Redis (`revoke_session`).
+  - Khi người dùng đổi mật khẩu (`POST /auth/reset-password`): thu hồi toàn bộ phiên đang hoạt động của tài khoản (`revoke_user_sessions`) trước khi cấp token mới.
+  - Middleware `get_current_user` và WebSocket handshake kiểm tra `is_session_active(user_id, jti)`. Nếu phiên đã bị thu hồi, từ chối với HTTP 401 hoặc đóng kết nối WebSocket với code `1008`.
+  - Quy định về Ban: Trạng thái Banned khóa quyền tham gia ghép cặp (`/match/join`), không thu hồi JWT đăng nhập để người dùng vẫn có thể xem thông tin cá nhân.
+- **WebSocket Connection Limits (Giới hạn kết nối đồng thời)**:
+  - Tối đa 3 kết nối WebSocket đồng thời / tài khoản (`MAX_WS_CONNECTIONS_PER_USER = 3`).
+  - Tối đa 10 kết nối WebSocket đồng thời / IP (`MAX_WS_CONNECTIONS_PER_IP = 10`).
+  - Được quản lý nguyên tử bằng Lua script trên Redis kèm TTL 24h tự dọn dẹp, giải phóng tức thì khi socket đóng (`finally`). Vượt quá giới hạn sẽ bị đóng với mã `WS_1008_POLICY_VIOLATION`.

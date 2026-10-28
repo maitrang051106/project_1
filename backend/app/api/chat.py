@@ -16,11 +16,17 @@ from fastapi import (
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
-from app.core.constants import DEFAULT_AVATAR, MAX_CHAT_MESSAGE_LENGTH
+from app.api.deps import get_client_ip, get_current_user, is_allowed_websocket_origin
+from app.core.constants import (
+    DEFAULT_AVATAR,
+    MAX_CHAT_MESSAGE_LENGTH,
+    MAX_WS_CONNECTIONS_PER_IP,
+    MAX_WS_CONNECTIONS_PER_USER,
+)
 from app.core.db import SessionLocal, get_db
 from app.core.security import decode_access_token
 from app.models.conversation import Conversation
+from app.models.enums import UserStatus
 from app.models.friendship import Friendship
 from app.models.user import User
 from app.services.store import store_service
@@ -36,6 +42,10 @@ async def chat_websocket(
     room_id: int,
     token: str | None = Query(default=None),
 ) -> None:
+    if not is_allowed_websocket_origin(websocket.headers.get("origin")):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     # 1. Authenticate user from JWT token
     auth_token = token or websocket.cookies.get("access_token")
     if not auth_token:
@@ -50,6 +60,23 @@ async def chat_websocket(
     try:
         user_id = int(payload["sub"])
     except (ValueError, TypeError):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    jti = payload.get("jti")
+    if not jti or not await store_service.is_session_active(user_id, jti):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    client_ip = get_client_ip(websocket)
+    slot_ok, slot_reason = await store_service.acquire_ws_slot(
+        user_id=user_id,
+        client_ip=client_ip,
+        max_user=MAX_WS_CONNECTIONS_PER_USER,
+        max_ip=MAX_WS_CONNECTIONS_PER_IP,
+    )
+    if not slot_ok:
+        logger.warning("Rejecting chat websocket for user %s: %s", user_id, slot_reason)
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
@@ -73,6 +100,14 @@ async def chat_websocket(
 
         current_user = users_map.get(user_id)
         opp_user = users_map.get(opp_id)
+
+        if (
+            not current_user
+            or current_user.status == UserStatus.BANNED
+            or current_user.trust_score <= 0
+        ):
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
 
         nickname = current_user.nickname if current_user else "You"
         avatar = current_user.avatar if current_user else DEFAULT_AVATAR
@@ -150,7 +185,34 @@ async def chat_websocket(
                 event_type = data["type"]
 
                 if event_type == "friend_request":
-                    # Broadcast friend request to room
+                    lower_user_id = min(user_id, opp_id)
+                    upper_user_id = max(user_id, opp_id)
+                    async with SessionLocal() as db:
+                        f_check = await db.execute(
+                            select(Friendship)
+                            .where(
+                                (Friendship.user_a == lower_user_id)
+                                & (Friendship.user_b == upper_user_id)
+                            )
+                            .with_for_update()
+                        )
+                        friendship = f_check.scalar_one_or_none()
+                        if friendship and friendship.status == "accepted":
+                            continue
+                        if friendship and friendship.status == "pending":
+                            if friendship.requested_by != user_id:
+                                continue
+                        else:
+                            if friendship is None:
+                                friendship = Friendship(
+                                    user_a=lower_user_id,
+                                    user_b=upper_user_id,
+                                )
+                                db.add(friendship)
+                            friendship.requested_by = user_id
+                            friendship.status = "pending"
+                            await db.commit()
+
                     await store_service.broadcast_to_room(
                         room_id,
                         {
@@ -162,35 +224,42 @@ async def chat_websocket(
                         },
                     )
                 elif event_type == "friend_response":
-                    accepted = bool(data.get("accepted"))
-                    if accepted:
-                        async with SessionLocal() as db:
-                            # Create or update friendship
-                            f_check = await db.execute(
-                                select(Friendship).where(
-                                    or_(
-                                        (Friendship.user_a == user_id) & (Friendship.user_b == opp_id),
-                                        (Friendship.user_a == opp_id) & (Friendship.user_b == user_id),
-                                    )
-                                )
-                            )
-                            existing_f = f_check.scalar_one_or_none()
-                            if not existing_f:
-                                existing_f = Friendship(
-                                    user_a=min(user_id, opp_id),
-                                    user_b=max(user_id, opp_id),
-                                    status="accepted",
-                                )
-                                db.add(existing_f)
-                            else:
-                                existing_f.status = "accepted"
+                    accepted = data.get("accepted")
+                    if not isinstance(accepted, bool):
+                        continue
 
-                            u_res = await db.execute(select(User).where(User.id.in_([user_id, opp_id])))
+                    lower_user_id = min(user_id, opp_id)
+                    upper_user_id = max(user_id, opp_id)
+                    async with SessionLocal() as db:
+                        f_check = await db.execute(
+                            select(Friendship)
+                            .where(
+                                (Friendship.user_a == lower_user_id)
+                                & (Friendship.user_b == upper_user_id)
+                            )
+                            .with_for_update()
+                        )
+                        friendship = f_check.scalar_one_or_none()
+                        if (
+                            not friendship
+                            or not friendship.can_be_responded_to_by(
+                                responder_id=user_id,
+                                requester_id=opp_id,
+                            )
+                        ):
+                            continue
+
+                        friendship.status = "accepted" if accepted else "declined"
+                        if accepted:
+                            u_res = await db.execute(
+                                select(User).where(User.id.in_([user_id, opp_id]))
+                            )
                             users = {u.id: u for u in u_res.scalars().all()}
                             u1 = users.get(user_id)
                             u2 = users.get(opp_id)
-                            await db.commit()
+                        await db.commit()
 
+                    if accepted and u1 and u2:
                         await store_service.broadcast_to_room(
                             room_id,
                             {
@@ -242,6 +311,7 @@ async def chat_websocket(
     finally:
         send_task.cancel()
         await store_service.unsubscribe_room(room_id, listener_queue)
+        await store_service.release_ws_slot(user_id=user_id, client_ip=client_ip)
         await store_service.broadcast_to_room(
             room_id,
             {

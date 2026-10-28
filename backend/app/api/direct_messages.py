@@ -17,11 +17,17 @@ from pydantic import BaseModel, Field
 from sqlalchemy import and_, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
-from app.core.constants import DEFAULT_AVATAR, MAX_DIRECT_MESSAGE_LENGTH
+from app.api.deps import get_client_ip, get_current_user, is_allowed_websocket_origin
+from app.core.constants import (
+    DEFAULT_AVATAR,
+    MAX_DIRECT_MESSAGE_LENGTH,
+    MAX_WS_CONNECTIONS_PER_IP,
+    MAX_WS_CONNECTIONS_PER_USER,
+)
 from app.core.db import SessionLocal, get_db
 from app.core.security import decode_access_token
 from app.models.direct_message import DirectMessage
+from app.models.enums import UserStatus
 from app.models.friendship import Friendship
 from app.models.user import User
 from app.services.store import store_service
@@ -203,6 +209,10 @@ async def direct_message_websocket(
     friend_id: int,
     token: str | None = Query(default=None),
 ) -> None:
+    if not is_allowed_websocket_origin(websocket.headers.get("origin")):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     auth_token = token or websocket.cookies.get("access_token")
     if not auth_token:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
@@ -216,6 +226,23 @@ async def direct_message_websocket(
     try:
         user_id = int(payload["sub"])
     except (ValueError, TypeError):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    jti = payload.get("jti")
+    if not jti or not await store_service.is_session_active(user_id, jti):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    client_ip = get_client_ip(websocket)
+    slot_ok, slot_reason = await store_service.acquire_ws_slot(
+        user_id=user_id,
+        client_ip=client_ip,
+        max_user=MAX_WS_CONNECTIONS_PER_USER,
+        max_ip=MAX_WS_CONNECTIONS_PER_IP,
+    )
+    if not slot_ok:
+        logger.warning("Rejecting direct WS for user %s: %s", user_id, slot_reason)
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
@@ -237,8 +264,15 @@ async def direct_message_websocket(
 
         u_res = await db.execute(select(User).where(User.id == user_id))
         user = u_res.scalar_one_or_none()
-        nickname = user.nickname if user else "Friend"
-        avatar = user.avatar if user else DEFAULT_AVATAR
+        if (
+            not user
+            or user.status == UserStatus.BANNED
+            or user.trust_score <= 0
+        ):
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+        nickname = user.nickname
+        avatar = user.avatar or DEFAULT_AVATAR
 
     await websocket.accept()
 
@@ -291,4 +325,5 @@ async def direct_message_websocket(
     finally:
         send_task.cancel()
         await store_service.unsubscribe_room(room_key, listener_queue)
+        await store_service.release_ws_slot(user_id=user_id, client_ip=client_ip)
 

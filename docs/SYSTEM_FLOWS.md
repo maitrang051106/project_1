@@ -245,7 +245,7 @@ flowchart TD
     Start([Bắt đầu Quên Mật Khẩu]) --> InputEmail["Nhập Email sinh viên"]
     InputEmail --> CallReq["POST /auth/request-reset-otp"]
     CallReq --> CheckUser{"Tài khoản có tồn tại?"}
-    CheckUser -- "Không" --> ErrNotFound["Báo lỗi: 404 Không tìm thấy tài khoản"]
+    CheckUser -- "Không" --> EnumSafe["Chống enumeration: Trả 200 'Nếu địa chỉ hợp lệ, mã sẽ được gửi'"]
     CheckUser -- "Có" --> CheckCD{"Đang trong Cooldown 60s?"}
     CheckCD -- "Có" --> ErrCD["Báo lỗi: 429 Vui lòng chờ 60 giây"]
     CheckCD -- "Không" --> GenOTP["Tạo OTP mới, lưu Redis TTL 300s & gửi email"]
@@ -330,29 +330,29 @@ $$\text{is\_mutual\_match}(A, B) = \text{Accepts}(A \to B) \land \text{Accepts}(
 flowchart TD
     Start([User ấn 'Bắt đầu ghép']) --> CheckProf{"Đã hoàn thiện Profile chưa?"}
     CheckProf -- "Chưa" --> RetErr["400: Yêu cầu hoàn thành Onboarding"]
-    CheckProf -- "Rồi" --> ClearOld["Xóa kết quả ghép cũ trong Store"]
-    ClearOld --> ScanQueue["Quét các ứng viên trong hàng đợi (StoreService)"]
-    ScanQueue --> FilterStale["Loại bỏ ứng viên timeout > 60 giây"]
+    CheckProf -- "Rồi" --> GenAtt["Tạo attempt_id mới & dọn kết quả cũ"]
+    GenAtt --> ScanQueue["Quét các ứng viên trong hàng đợi (StoreService)"]
+    ScanQueue --> FilterStale["Loại bỏ ứng viên timeout >= 60 giây"]
     FilterStale --> LoopCand{"Duyệt từng ứng viên trong hàng đợi"}
 
     LoopCand -- "Thử ứng viên B" --> EvalMutual{"is_mutual_match(A, B) == True?\n(Thỏa mãn cả 3 bộ lọc 2 chiều)"}
     EvalMutual -- "Không khớp" --> LoopCand
 
-    EvalMutual -- "Khớp cả 2 chiều!" --> FoundMatch["ĐÃ TÌM THẤY ĐỐI TÁC PHÙ HỢP!"]
-    FoundMatch --> DequeueB["Rút B ra khỏi hàng đợi"]
-    FoundMatch --> CreateRoom["Tạo Conversation mới trong MySQL (user_a, user_b, type=HUMAN)"]
+    EvalMutual -- "Khớp cả 2 chiều!" --> Reserve["Redis Lua Script: RESERVE_CANDIDATE_LUA\n(Khóa nguyên tử tránh ghép trùng)"]
+    Reserve -- "Thất bại (B vừa bị ghép bởi lượt khác)" --> LoopCand
+    Reserve -- "Thành công" --> CreateRoom["Tạo Conversation mới trong MySQL (user_a, user_b, type=HUMAN)"]
     CreateRoom --> SaveResult["Lưu match_result cho cả A và B trong Store (TTL 300s)"]
-    SaveResult --> RetMatched["API trả về: status='matched', room_id"]
+    SaveResult --> RetMatched["API trả về: status='matched', room_id, attempt_id"]
     RetMatched --> EnterChat["Frontend tự động điều hướng vào /chat/{room_id}"]
 
-    LoopCand -- "Hết danh sách mà không có ai khớp" --> AddToQ["Đưa User A vào hàng đợi (Queue)"]
-    AddToQ --> RetWaiting["API trả về: status='waiting'"]
-    RetWaiting --> StartPolling["Frontend bật đếm giờ & Polling GET /match/status mỗi 2.5s"]
+    LoopCand -- "Hết danh sách mà không có ai khớp" --> AddToQ["Đưa User A vào hàng đợi (Queue TTL 65s)"]
+    AddToQ --> RetWaiting["API trả về: status='waiting', attempt_id"]
+    RetWaiting --> StartPolling["Frontend bật đếm giờ & Polling GET /match/status mỗi 2s"]
 
-    StartPolling --> PollCheck{"Poll kiểm tra kết quả"}
-    PollCheck -- "Có người khác vào ghép trúng A" --> ReceiveMatch["Nhận room_id -> Điều hướng /chat/{room_id}"]
-    PollCheck -- "User ấn 'Hủy tìm kiếm'" --> LeaveAPI["POST /match/leave -> Xóa khỏi hàng đợi"]
-    PollCheck -- "Quá 60s chưa có ai" --> TimeoutMatch["Báo hết thời gian tìm kiếm -> Thử lại"]
+    StartPolling --> PollCheck{"Poll kiểm tra kết quả theo attempt_id"}
+    PollCheck -- "status == 'matched'" --> ReceiveMatch["Nhận room_id -> Điều hướng /chat/{room_id}"]
+    PollCheck -- "User ấn 'Hủy tìm kiếm'" --> LeaveAPI["POST /match/leave -> Hủy lượt tìm, reset về 'idle'"]
+    PollCheck -- "status == 'not_found' (sau 60s)" --> TimeoutMatch["UI dừng polling -> Hiện màn hình Timeout\n(Lựa chọn 'Thử lại ngay' hoặc 'Đổi tiêu chí')"]
 ```
 
 ---

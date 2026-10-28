@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
@@ -8,26 +10,30 @@ from app.api.health import router as health_router
 from app.api.matching import router as matching_router
 from app.api.profile import router as profile_router
 from app.core.config import settings
+from app.services.store import RedisUnavailable, store_service
 
-app = FastAPI(title=settings.app_name)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await store_service.init_redis()
+    yield
+    await store_service.close_redis()
+
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
+
+@app.exception_handler(RedisUnavailable)
+async def redis_unavailable_handler(request: Request, exc: RedisUnavailable):
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "Service temporarily unavailable due to shared storage outage. Please retry shortly."},
+    )
 
 # CORS configuration supporting credentials (cookies)
-cors_origins = [
-    settings.frontend_origin,
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-]
-for v_domain in [
-    "https://project-1-hust-chatbox.vercel.app",
-    "https://project-1-qtlhgs1xa-maitrang051106s-projects.vercel.app",
-]:
-    if v_domain not in cors_origins:
-        cors_origins.append(v_domain)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

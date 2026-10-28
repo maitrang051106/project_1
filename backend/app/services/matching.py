@@ -1,6 +1,36 @@
 from dataclasses import dataclass
+from datetime import datetime, time, timedelta, timezone
 
 from app.models.enums import Gender, TargetCohort, TargetGender, TargetMajorFaculty
+
+VIETNAM_TIMEZONE = timezone(timedelta(hours=7), name="ICT")
+
+
+def daily_match_limit(trust_score: int) -> int | None:
+    """Return the accepted daily conversation quota for a trust score."""
+    if trust_score >= 90:
+        return None
+    if trust_score >= 70:
+        return 5
+    if trust_score >= 50:
+        return 3
+    if trust_score > 0:
+        return 1
+    return 0
+
+
+def vietnam_day_utc_window(now: datetime | None = None) -> tuple[datetime, datetime]:
+    """Return naive UTC bounds for the current Vietnam calendar day."""
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+
+    local_now = current.astimezone(VIETNAM_TIMEZONE)
+    local_start = datetime.combine(local_now.date(), time.min, tzinfo=VIETNAM_TIMEZONE)
+    local_end = local_start + timedelta(days=1)
+    utc_start = local_start.astimezone(timezone.utc).replace(tzinfo=None)
+    utc_end = local_end.astimezone(timezone.utc).replace(tzinfo=None)
+    return utc_start, utc_end
 
 
 @dataclass(frozen=True)

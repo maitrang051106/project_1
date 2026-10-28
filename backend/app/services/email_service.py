@@ -53,12 +53,12 @@ def build_otp_email_message(
 
 async def send_otp_email(
     to_email: str, otp: str, subject_prefix: str = "Verification Code"
-) -> None:
-    """Send HTML verification OTP email to HUST student via aiosmtplib."""
-    logger.info("==========================================")
-    logger.info(">>> OTP FOR [%s]: %s <<<", to_email, otp)
-    logger.info("==========================================")
+) -> bool:
+    """Send HTML verification OTP email to HUST student via aiosmtplib.
 
+    Returns True if delivery succeeded, False if SMTP sending failed.
+    Never logs raw emails, recipient addresses, or OTP values.
+    """
     try:
         msg = build_otp_email_message(to_email, otp, subject_prefix)
 
@@ -81,6 +81,8 @@ async def send_otp_email(
             start_tls=start_tls,
             timeout=15.0,
         )
-        logger.info("Successfully sent OTP email to [%s]", to_email)
+        logger.info("Successfully sent verification OTP email.")
+        return True
     except Exception as e:
-        logger.warning("SMTP send failed (offline/dev mock or network error): %s", e)
+        logger.warning("SMTP delivery failed with error: %s", type(e).__name__)
+        return False

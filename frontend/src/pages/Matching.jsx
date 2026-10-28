@@ -14,46 +14,52 @@ export default function Matching() {
   const [targetMajorFaculty, setTargetMajorFaculty] = useState(TARGET_MAJOR_FACULTY_OPTIONS[0].id);
   const [targetCohort, setTargetCohort] = useState(TARGET_COHORT_OPTIONS[0].id);
 
-  const [isSearching, setIsSearching] = useState(false);
+  // Status can be: "idle" | "searching" | "not_found"
+  const [matchStatus, setMatchStatus] = useState("idle");
   const [searchTimer, setSearchTimer] = useState(0);
+  const [attemptId, setAttemptId] = useState(null);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Polling queue status
+  // Polling queue status while searching
   useEffect(() => {
     let interval;
-    if (isSearching) {
+    if (matchStatus === "searching") {
       interval = setInterval(async () => {
         try {
           const res = await apiFetch("/match/status");
           if (res.ok) {
             const data = await res.json();
             if (data.status === "matched" && data.room_id) {
-              setIsSearching(false);
+              setMatchStatus("idle");
               navigate(`/chat/${data.room_id}`);
+            } else if (data.status === "not_found") {
+              setMatchStatus("not_found");
             }
           }
         } catch (err) {
           console.error("Error polling match status:", err);
         }
-      }, 2500);
+      }, 2000);
     }
     return () => clearInterval(interval);
-  }, [isSearching, navigate]);
+  }, [matchStatus, navigate]);
 
   // Search timer
   useEffect(() => {
     let t;
-    if (isSearching) {
+    if (matchStatus === "searching") {
       t = setInterval(() => setSearchTimer((prev) => prev + 1), 1000);
     } else {
       setSearchTimer(0);
     }
     return () => clearInterval(t);
-  }, [isSearching]);
+  }, [matchStatus]);
 
   const handleStartMatch = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError("");
+    setIsSubmitting(true);
 
     try {
       const res = await apiFetch("/match/join", {
@@ -67,27 +73,42 @@ export default function Matching() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.detail || "Unable to join matching queue");
+        throw new Error(data.detail || "Không thể tham gia hàng đợi ghép đôi");
       }
 
+      setAttemptId(data.attempt_id || null);
+
       if (data.status === "matched" && data.room_id) {
+        setMatchStatus("idle");
         navigate(`/chat/${data.room_id}`);
       } else {
-        setIsSearching(true);
+        setMatchStatus("searching");
       }
     } catch (err) {
       setError(err.message);
+      setMatchStatus("idle");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleCancelMatch = async () => {
+    setIsSubmitting(true);
     try {
       await apiFetch("/match/leave", { method: "POST" });
     } catch (e) {
       console.error(e);
     } finally {
-      setIsSearching(false);
+      setIsSubmitting(false);
+      setMatchStatus("idle");
+      setAttemptId(null);
     }
+  };
+
+  const handleChangeFilters = () => {
+    setMatchStatus("idle");
+    setAttemptId(null);
+    setError("");
   };
 
   return (
@@ -97,7 +118,7 @@ export default function Matching() {
           Anonymous Match
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Set your 3 mutual preference filters to find a HUST conversation partner
+          Ghép đôi trò chuyện ngẫu nhiên với sinh viên Bách Khoa theo 3 tiêu chí
         </p>
       </div>
 
@@ -107,12 +128,12 @@ export default function Matching() {
         </div>
       )}
 
-      {!isSearching ? (
+      {matchStatus === "idle" && (
         <form onSubmit={handleStartMatch} className="space-y-6">
           {/* Target Gender */}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">
-              1. Looking for Gender
+              1. Giới tính mong muốn
             </label>
             <div className="grid grid-cols-3 gap-2">
               {TARGET_GENDER_OPTIONS.map((item) => (
@@ -136,7 +157,7 @@ export default function Matching() {
           {/* Target Major / Faculty */}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">
-              2. Major / School
+              2. Viện / Ngành học
             </label>
             <div className="grid grid-cols-2 gap-2">
               {TARGET_MAJOR_FACULTY_OPTIONS.map((item) => (
@@ -159,7 +180,7 @@ export default function Matching() {
           {/* Target Cohort */}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">
-              3. Cohort (Batch)
+              3. Khóa sinh viên
             </label>
             <div className="grid grid-cols-2 gap-2">
               {TARGET_COHORT_OPTIONS.map((item) => (
@@ -181,13 +202,15 @@ export default function Matching() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-red-700 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-800 transition"
+            disabled={isSubmitting}
+            className="w-full rounded-xl bg-red-700 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:opacity-50 transition cursor-pointer"
           >
-            Start Matching
+            {isSubmitting ? "Đang kết nối..." : "Bắt đầu tìm bạn"}
           </button>
         </form>
-      ) : (
-        /* Radar Animation Screen */
+      )}
+
+      {matchStatus === "searching" && (
         <div className="flex flex-col items-center justify-center py-10">
           <div className="relative flex h-36 w-36 items-center justify-center">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-200 opacity-75" />
@@ -198,18 +221,50 @@ export default function Matching() {
           </div>
 
           <h3 className="mt-6 text-lg font-bold text-slate-900">
-            Finding a matching peer...
+            Đang tìm kiếm người phù hợp...
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            Searching for students matching your criteria ({searchTimer}s)
+            Đang tìm sinh viên thỏa mãn đồng thời 3 tiêu chí ({searchTimer}s / 60s)
           </p>
 
           <button
             onClick={handleCancelMatch}
-            className="mt-8 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+            disabled={isSubmitting}
+            className="mt-8 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition cursor-pointer disabled:opacity-50"
           >
-            Cancel Search
+            {isSubmitting ? "Đang hủy..." : "Hủy tìm kiếm"}
           </button>
+        </div>
+      )}
+
+      {matchStatus === "not_found" && (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-2xl text-amber-600 mb-4">
+            ⏳
+          </div>
+          <h3 className="text-lg font-bold text-slate-900">
+            Chưa tìm thấy người phù hợp
+          </h3>
+          <p className="mt-2 text-sm text-slate-600 max-w-sm">
+            Sau 60 giây tìm kiếm, hiện tại chưa có sinh viên nào cùng thời điểm ghép đôi khớp với cả 3 tiêu chí của bạn.
+          </p>
+
+          <div className="mt-6 flex w-full flex-col gap-3 sm:flex-row">
+            <button
+              onClick={() => handleStartMatch(null)}
+              disabled={isSubmitting}
+              className="flex-1 rounded-xl bg-red-700 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-red-800 transition disabled:opacity-50 cursor-pointer"
+            >
+              {isSubmitting ? "Đang tìm lại..." : "Thử lại ngay"}
+            </button>
+            <button
+              onClick={handleChangeFilters}
+              disabled={isSubmitting}
+              className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50 cursor-pointer"
+            >
+              Đổi tiêu chí tìm kiếm
+            </button>
+          </div>
         </div>
       )}
     </div>

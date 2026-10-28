@@ -59,10 +59,10 @@ export default function Login() {
         method: "POST",
         body: JSON.stringify({ email: trimmedEmail }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        throw new Error(data.detail || "Failed to send verification code");
+        throw new Error(data?.detail || "Unable to reach server. Please ensure backend is running.");
       }
 
       setOtpSent(true);
@@ -94,9 +94,9 @@ export default function Login() {
         method: "POST",
         body: JSON.stringify({ email: trimmedEmail, password }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data.detail || "Invalid email or password");
+        throw new Error(data?.detail || "Unable to reach server or invalid credentials.");
       }
 
       setUser(data.user);
@@ -138,9 +138,9 @@ export default function Login() {
           password,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data.detail || "Registration failed");
+        throw new Error(data?.detail || "Registration failed. Please check your connection.");
       }
 
       setUser(data.user);
@@ -178,9 +178,9 @@ export default function Login() {
           new_password: password,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data.detail || "Password reset failed");
+        throw new Error(data?.detail || "Password reset failed. Please check your connection.");
       }
 
       setUser(data.user);

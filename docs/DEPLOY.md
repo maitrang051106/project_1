@@ -12,7 +12,8 @@ Giới hạn nhà cung cấp thay đổi; kiểm tra trước khi triển khai.
 - Start: `python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers`.
 - Health check: `/health`.
 - Cấu hình `DATABASE_URL`, `REDIS_URL`, `OTP_SECRET`, `JWT_SECRET`,
-  `EMAIL_*`/`SMTP_*`, `FRONTEND_ORIGIN`, `COOKIE_SECURE`, `COOKIE_SAMESITE`.
+  `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USERNAME`, `EMAIL_PASSWORD`, `EMAIL_FROM`,
+  `EMAIL_USE_TLS`, `FRONTEND_ORIGIN`, `COOKIE_SECURE`, `COOKIE_SAMESITE`.
 - Xác nhận dịch vụ Redis hỗ trợ Pub/Sub và kiểm tra giới hạn gói hiện tại.
 
 ## Frontend – Vercel

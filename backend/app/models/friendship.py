@@ -31,6 +31,10 @@ class Friendship(Base):
         ForeignKey("users.id", name="fk_friendships_user_b_users", ondelete="CASCADE"),
         nullable=False,
     )
+    requested_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", name="fk_friendships_requested_by_users", ondelete="CASCADE"),
+        nullable=True,
+    )
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="accepted"
     )
@@ -47,4 +51,12 @@ class Friendship(Base):
     friend_b: Mapped["User"] = relationship(
         "User", back_populates="friendships_as_b", foreign_keys=[user_b]
     )
+
+    def can_be_responded_to_by(self, responder_id: int, requester_id: int) -> bool:
+        return (
+            self.status == "pending"
+            and self.requested_by == requester_id
+            and responder_id != requester_id
+            and {self.user_a, self.user_b} == {responder_id, requester_id}
+        )
 
