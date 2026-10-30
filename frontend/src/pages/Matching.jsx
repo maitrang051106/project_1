@@ -73,7 +73,7 @@ export default function Matching() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.detail || "Không thể tham gia hàng đợi ghép đôi");
+        throw new Error(data.detail || "Unable to join matching queue");
       }
 
       setAttemptId(data.attempt_id || null);
@@ -118,7 +118,7 @@ export default function Matching() {
           Anonymous Match
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Ghép đôi trò chuyện ngẫu nhiên với sinh viên Bách Khoa theo 3 tiêu chí
+          Randomly match and chat with HUST peers based on 3 criteria
         </p>
       </div>
 
@@ -133,7 +133,7 @@ export default function Matching() {
           {/* Target Gender */}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">
-              1. Giới tính mong muốn
+              1. Target Gender
             </label>
             <div className="grid grid-cols-3 gap-2">
               {TARGET_GENDER_OPTIONS.map((item) => (
@@ -157,7 +157,7 @@ export default function Matching() {
           {/* Target Major / Faculty */}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">
-              2. Viện / Ngành học
+              2. Target School / Major
             </label>
             <div className="grid grid-cols-2 gap-2">
               {TARGET_MAJOR_FACULTY_OPTIONS.map((item) => (
@@ -180,7 +180,7 @@ export default function Matching() {
           {/* Target Cohort */}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">
-              3. Khóa sinh viên
+              3. Target Cohort
             </label>
             <div className="grid grid-cols-2 gap-2">
               {TARGET_COHORT_OPTIONS.map((item) => (
@@ -205,7 +205,7 @@ export default function Matching() {
             disabled={isSubmitting}
             className="w-full rounded-xl bg-red-700 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:opacity-50 transition cursor-pointer"
           >
-            {isSubmitting ? "Đang kết nối..." : "Bắt đầu tìm bạn"}
+            {isSubmitting ? "Connecting..." : "Start Matching"}
           </button>
         </form>
       )}
@@ -221,10 +221,10 @@ export default function Matching() {
           </div>
 
           <h3 className="mt-6 text-lg font-bold text-slate-900">
-            Đang tìm kiếm người phù hợp...
+            Finding a match...
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            Đang tìm sinh viên thỏa mãn đồng thời 3 tiêu chí ({searchTimer}s / 60s)
+            Searching for peers matching all 3 criteria ({searchTimer}s / 60s)
           </p>
 
           <button
@@ -232,7 +232,7 @@ export default function Matching() {
             disabled={isSubmitting}
             className="mt-8 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition cursor-pointer disabled:opacity-50"
           >
-            {isSubmitting ? "Đang hủy..." : "Hủy tìm kiếm"}
+            {isSubmitting ? "Canceling..." : "Cancel Search"}
           </button>
         </div>
       )}
@@ -243,10 +243,10 @@ export default function Matching() {
             ⏳
           </div>
           <h3 className="text-lg font-bold text-slate-900">
-            Chưa tìm thấy người phù hợp
+            No Match Found Yet
           </h3>
           <p className="mt-2 text-sm text-slate-600 max-w-sm">
-            Sau 60 giây tìm kiếm, hiện tại chưa có sinh viên nào cùng thời điểm ghép đôi khớp với cả 3 tiêu chí của bạn.
+            No peers currently match all 3 criteria within 60 seconds.
           </p>
 
           <div className="mt-6 flex w-full flex-col gap-3 sm:flex-row">
@@ -255,14 +255,14 @@ export default function Matching() {
               disabled={isSubmitting}
               className="flex-1 rounded-xl bg-red-700 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-red-800 transition disabled:opacity-50 cursor-pointer"
             >
-              {isSubmitting ? "Đang tìm lại..." : "Thử lại ngay"}
+              {isSubmitting ? "Retrying..." : "Try Again"}
             </button>
             <button
               onClick={handleChangeFilters}
               disabled={isSubmitting}
               className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50 cursor-pointer"
             >
-              Đổi tiêu chí tìm kiếm
+              Change Preferences
             </button>
           </div>
         </div>

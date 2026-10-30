@@ -16,7 +16,7 @@ class Profile(Base):
         primary_key=True,
     )
     gender: Mapped[str] = mapped_column(String(10), nullable=False)
-    faculty_code: Mapped[str] = mapped_column(String(20), nullable=False)
+    faculty_code: Mapped[str] = mapped_column(String(100), nullable=False)
     major_code: Mapped[str] = mapped_column(String(20), nullable=False)
     cohort: Mapped[int] = mapped_column(Integer, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

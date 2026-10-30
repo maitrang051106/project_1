@@ -6,22 +6,33 @@ from pathlib import Path
 @lru_cache(maxsize=1)
 def load_catalog() -> tuple[list[dict], dict[str, dict]]:
     """Load 68 HUST academic majors from CSV seed file."""
-    catalog_path = Path(__file__).resolve().parents[3] / "db" / "seed" / "hust-68-nganh-2026.csv"
+    candidate_paths = [
+        Path(__file__).resolve().parents[3] / "db" / "seed" / "hust-68-nganh-2026.csv",
+        Path(__file__).resolve().parents[2] / "db" / "seed" / "hust-68-nganh-2026.csv",
+        Path.cwd() / "db" / "seed" / "hust-68-nganh-2026.csv",
+        Path("/app/db/seed/hust-68-nganh-2026.csv"),
+    ]
+
+    catalog_path = next((p for p in candidate_paths if p.exists()), None)
     
     majors = []
     major_map = {}
 
-    if catalog_path.exists():
-        with open(catalog_path, mode="r", encoding="utf-8") as f:
+    if catalog_path and catalog_path.exists():
+        with open(catalog_path, mode="r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
-            for row in reader:
+            for raw_row in reader:
+                row = {k.strip().lstrip("\ufeff"): v for k, v in raw_row.items() if k}
+                major_code = row.get("major_code", "").strip()
+                if not major_code:
+                    continue
                 item = {
-                    "major_code": row["major_code"],
-                    "major_name": row["major_name"],
-                    "faculty_code": row["faculty_code"],
-                    "faculty_name": row["faculty_name"],
-                    "program_type": row.get("program_type", "Standard"),
-                    "is_new_2026": row.get("is_new_2026", "FALSE").upper() == "TRUE",
+                    "major_code": major_code,
+                    "major_name": row.get("major_name", "").strip(),
+                    "faculty_code": row.get("faculty_code", "").strip(),
+                    "faculty_name": row.get("faculty_name", "").strip(),
+                    "program_type": row.get("program_type", "Standard").strip(),
+                    "is_new_2026": str(row.get("is_new_2026", "FALSE")).strip().upper() == "TRUE",
                 }
                 majors.append(item)
                 major_map[item["major_code"].upper()] = item

@@ -35,7 +35,8 @@ def get_engine() -> AsyncEngine:
         _engine = create_async_engine(
             settings.database_url,
             connect_args=get_db_connect_args(settings.database_url),
-            pool_pre_ping=True,
+            pool_pre_ping=False,
+            pool_recycle=3600,
         )
     return _engine
 

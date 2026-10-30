@@ -167,12 +167,14 @@ class AuthService:
                 trust_score=100,
             )
             db.add(user)
+            has_profile = False
         else:
             if user.password_hash:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Account already registered. Please sign in.",
                 )
+            has_profile = bool(user.profile is not None)
             user.password_hash = pwd_hash
             user.email_hash = email_hash
             user.nickname = chosen_nickname
@@ -183,7 +185,6 @@ class AuthService:
         await db.refresh(user)
 
         token = await AuthService._issue_session_token(user.id)
-        has_profile = bool(user.profile is not None)
         return token, user, has_profile
 
     @staticmethod
@@ -228,12 +229,12 @@ class AuthService:
                 detail="Your account has been suspended.",
             )
 
+        has_profile = bool(user.profile is not None)
         user.last_login_at = func.now()
         await db.commit()
         await store_service.clear_rate_limit(login_limit_key)
 
         token = await AuthService._issue_session_token(user.id)
-        has_profile = bool(user.profile is not None)
         return token, user, has_profile
 
     @staticmethod
@@ -339,6 +340,7 @@ class AuthService:
                 detail="Invalid or expired verification code.",
             )
 
+        has_profile = bool(user.profile is not None)
         user.password_hash = hash_password(payload.new_password)
         user.last_login_at = func.now()
         await db.commit()
@@ -347,5 +349,4 @@ class AuthService:
         await store_service.revoke_user_sessions(user.id)
 
         token = await AuthService._issue_session_token(user.id)
-        has_profile = bool(user.profile is not None)
         return token, user, has_profile

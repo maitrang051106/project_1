@@ -1,69 +1,69 @@
-﻿major_code,major_name,faculty_code,faculty_name,program_type,is_new_2026
-BF1,Kỹ thuật Sinh học,truong-hoa-va-khoa-hoc-su-song-scls,Trường Hóa và Khoa học sự sống (SCLS),Chuẩn,FALSE
-BF2,Kỹ thuật Thực phẩm,truong-hoa-va-khoa-hoc-su-song-scls,Trường Hóa và Khoa học sự sống (SCLS),Chuẩn,FALSE
-CH1,Kỹ thuật Hóa học,truong-hoa-va-khoa-hoc-su-song-scls,Trường Hóa và Khoa học sự sống (SCLS),Chuẩn,FALSE
-CH2,Hóa học,truong-hoa-va-khoa-hoc-su-song-scls,Trường Hóa và Khoa học sự sống (SCLS),Chuẩn,FALSE
-EV1,Kỹ thuật Môi trường,truong-hoa-va-khoa-hoc-su-song-scls,Trường Hóa và Khoa học sự sống (SCLS),Chuẩn,FALSE
-EV2,Quản lý Tài nguyên và Môi trường,truong-hoa-va-khoa-hoc-su-song-scls,Trường Hóa và Khoa học sự sống (SCLS),Chuẩn,FALSE
-BF-E12,Kỹ thuật Thực phẩm (Chương trình tiên tiến),truong-hoa-va-khoa-hoc-su-song-scls,Trường Hóa và Khoa học sự sống (SCLS),Tiên tiến,FALSE
-BF-E19,Kỹ thuật Sinh học (Chương trình tiên tiến),truong-hoa-va-khoa-hoc-su-song-scls,Trường Hóa và Khoa học sự sống (SCLS),Tiên tiến,FALSE
-CH-E11,Kỹ thuật Hóa dược (Chương trình tiên tiến),truong-hoa-va-khoa-hoc-su-song-scls,Trường Hóa và Khoa học sự sống (SCLS),Tiên tiến,FALSE
-CH-E20,Hóa học Mỹ phẩm (Chương trình tiên tiến),truong-hoa-va-khoa-hoc-su-song-scls,Trường Hóa và Khoa học sự sống (SCLS),Tiên tiến,TRUE
-EE1,Kỹ thuật điện,truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Chuẩn,FALSE
-EE2,Kỹ thuật điều khiển & Tự động hóa,truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Chuẩn,FALSE
-ET1,Kỹ thuật Điện tử – Viễn thông,truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Chuẩn,FALSE
-ET2,Kỹ thuật Y sinh,truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Chuẩn,FALSE
-EE-E8,Kỹ thuật điều khiển – Tự động hóa (Chương trình tiên tiến),truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Tiên tiến,FALSE
-EE-E18,Hệ thống điện và năng lượng tái tạo (Chương trình tiên tiến),truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Tiên tiến,FALSE
-ET-E4,Kỹ thuật Điện tử – Viễn thông (Chương trình tiên tiến),truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Tiên tiến,FALSE
-ET-E5,Kỹ thuật Y sinh (Chương trình tiên tiến),truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Tiên tiến,FALSE
-ET-E16,Truyền thông số và Kỹ thuật đa phương tiện (Chương trình tiên tiến),truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Tiên tiến,FALSE
-ET-E9,Hệ thống nhúng thông minh và IoT (tăng cường tiếng Nhật),truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Tăng cường NN,FALSE
-ET-LUH,Điện tử – Viễn thông – ĐH Leibniz Hannover (CHLB Đức),truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),Chuẩn đầu ra NN khác,FALSE
-EE-EP,Tin học công nghiệp và Tự động hóa (Việt – Pháp),truong-dien-dien-tu-seee,Trường Điện – Điện tử (SEEE),PFIEV,FALSE
-ME1,Kỹ thuật Cơ điện tử,truong-co-khi,Trường Cơ khí,Chuẩn,FALSE
-ME2,Kỹ thuật Cơ khí,truong-co-khi,Trường Cơ khí,Chuẩn,FALSE
-HE1,Kỹ thuật Nhiệt,truong-co-khi,Trường Cơ khí,Chuẩn,FALSE
-TE1,Kỹ thuật Ô tô,truong-co-khi,Trường Cơ khí,Chuẩn,FALSE
-TE2,Kỹ thuật Cơ khí động lực,truong-co-khi,Trường Cơ khí,Chuẩn,FALSE
-TE3,Kỹ thuật Hàng không,truong-co-khi,Trường Cơ khí,Chuẩn,FALSE
-ME-E1,Kỹ thuật Cơ điện tử (Chương trình tiên tiến),truong-co-khi,Trường Cơ khí,Tiên tiến,FALSE
-TE-E2,Kỹ thuật Ô tô (Chương trình tiên tiến),truong-co-khi,Trường Cơ khí,Tiên tiến,FALSE
-ME-LUH,Cơ điện tử – hợp tác ĐH Leibniz Hannover (CHLB Đức),truong-co-khi,Trường Cơ khí,Chuẩn đầu ra NN khác,FALSE
-ME-NUT,Cơ điện tử – hợp tác ĐHCN Nagaoka (Nhật Bản),truong-co-khi,Trường Cơ khí,Chuẩn đầu ra NN khác,FALSE
-ME-GU,Cơ khí Chế tạo máy – hợp tác ĐH Griffith (Úc),truong-co-khi,Trường Cơ khí,Chuẩn đầu ra NN khác,FALSE
-TE-EP,Cơ khí Hàng không (Việt – Pháp),truong-co-khi,Trường Cơ khí,PFIEV,FALSE
-IT1,CNTT: Khoa học Máy tính,truong-cong-nghe-thong-tin-va-truyen-thong-soict,Trường Công nghệ Thông tin và Truyền thông (SoICT),Chuẩn,FALSE
-IT2,CNTT: Kỹ thuật Máy tính,truong-cong-nghe-thong-tin-va-truyen-thong-soict,Trường Công nghệ Thông tin và Truyền thông (SoICT),Chuẩn,FALSE
-IT-E7,Công nghệ Thông tin Global ICT (Chương trình tiên tiến),truong-cong-nghe-thong-tin-va-truyen-thong-soict,Trường Công nghệ Thông tin và Truyền thông (SoICT),Tiên tiến,FALSE
-IT-E10,Khoa học Dữ liệu và Trí tuệ nhân tạo (Chương trình tiên tiến),truong-cong-nghe-thong-tin-va-truyen-thong-soict,Trường Công nghệ Thông tin và Truyền thông (SoICT),Tiên tiến,FALSE
-IT-E15,An toàn không gian số – Cyber Security (Chương trình tiên tiến),truong-cong-nghe-thong-tin-va-truyen-thong-soict,Trường Công nghệ Thông tin và Truyền thông (SoICT),Tiên tiến,FALSE
-IT-E6,Công nghệ Thông tin Việt – Nhật (tăng cường tiếng Nhật),truong-cong-nghe-thong-tin-va-truyen-thong-soict,Trường Công nghệ Thông tin và Truyền thông (SoICT),Tăng cường NN,FALSE
-IT-EP,Công nghệ Thông tin Việt – Pháp (tăng cường tiếng Pháp),truong-cong-nghe-thong-tin-va-truyen-thong-soict,Trường Công nghệ Thông tin và Truyền thông (SoICT),Tăng cường NN,FALSE
-TROY-IT,"Khoa học Máy tính – ĐH Troy (Hoa Kỳ), do ĐH Troy cấp bằng",truong-cong-nghe-thong-tin-va-truyen-thong-soict,Trường Công nghệ Thông tin và Truyền thông (SoICT),Liên kết QT,FALSE
-EM1,Quản lý Năng lượng,truong-kinh-te,Trường Kinh tế,Chuẩn,FALSE
-EM2,Quản lý Công nghiệp,truong-kinh-te,Trường Kinh tế,Chuẩn,FALSE
-EM3,Quản trị Kinh doanh,truong-kinh-te,Trường Kinh tế,Chuẩn,FALSE
-EM5,Tài chính – Ngân hàng,truong-kinh-te,Trường Kinh tế,Chuẩn,FALSE
-EM-E13,Phân tích Kinh doanh (Chương trình tiên tiến),truong-kinh-te,Trường Kinh tế,Tiên tiến,FALSE
-EM-E14,Logistics và Quản lý chuỗi cung ứng (Chương trình tiên tiến),truong-kinh-te,Trường Kinh tế,Tiên tiến,FALSE
-EM-E17,Kế toán (Chương trình tiên tiến),truong-kinh-te,Trường Kinh tế,Tiên tiến,FALSE
-MS1,Kỹ thuật Vật liệu,truong-vat-lieu,Trường Vật liệu,Chuẩn,FALSE
-MS2,Kỹ thuật Vi điện tử và Công nghệ nano,truong-vat-lieu,Trường Vật liệu,Chuẩn,FALSE
-MS3,Công nghệ vật liệu Polyme và Compozit,truong-vat-lieu,Trường Vật liệu,Chuẩn,FALSE
-MS5,Kỹ thuật In,truong-vat-lieu,Trường Vật liệu,Chuẩn,FALSE
-TX1,Công nghệ Dệt May,truong-vat-lieu,Trường Vật liệu,Chuẩn,FALSE
-MS-E3,Khoa học và Kỹ thuật Vật liệu (Chương trình tiên tiến),truong-vat-lieu,Trường Vật liệu,Tiên tiến,FALSE
-FL1,Tiếng Anh KHKT và Công nghệ,khoa-ngoai-ngu,Khoa Ngoại ngữ,Chuẩn,FALSE
-FL3,Tiếng Trung KH & CN,khoa-ngoai-ngu,Khoa Ngoại ngữ,Chuẩn,FALSE
-FL4,Tiếng Hàn KH & CN,khoa-ngoai-ngu,Khoa Ngoại ngữ,Chuẩn,TRUE
-FL2,"Tiếng Anh chuyên nghiệp quốc tế (ĐHBK Hà Nội & ĐH Plymouth Marjon, Anh cấp bằng)",khoa-ngoai-ngu,Khoa Ngoại ngữ,Liên kết QT,FALSE
-MI1,Toán – Tin,vien-toan-ung-dung-va-tin-hoc,Viện Toán ứng dụng và Tin học,Chuẩn,FALSE
-MI2,Hệ thống Thông tin quản lý,vien-toan-ung-dung-va-tin-hoc,Viện Toán ứng dụng và Tin học,Chuẩn,FALSE
-MI-E22,Khoa học tính toán cho các hệ thống thông minh (Chương trình tiên tiến),vien-toan-ung-dung-va-tin-hoc,Viện Toán ứng dụng và Tin học,Tiên tiến,TRUE
-PH1,Vật lý Kỹ thuật,khoa-vat-ly-ky-thuat,Khoa Vật lý Kỹ thuật,Chuẩn,FALSE
-PH2,Kỹ thuật Hạt nhân,khoa-vat-ly-ky-thuat,Khoa Vật lý Kỹ thuật,Chuẩn,FALSE
-PH3,Vật lý Y khoa,khoa-vat-ly-ky-thuat,Khoa Vật lý Kỹ thuật,Chuẩn,FALSE
-ED2,Công nghệ Giáo dục,khoa-khoa-hoc-va-cong-nghe-giao-duc,Khoa Khoa học và Công nghệ Giáo dục,Chuẩn,FALSE
-ED3,Quản lý Giáo dục,khoa-khoa-hoc-va-cong-nghe-giao-duc,Khoa Khoa học và Công nghệ Giáo dục,Chuẩn,FALSE
-ED5,Tâm lý học công nghiệp và tổ chức,khoa-khoa-hoc-va-cong-nghe-giao-duc,Khoa Khoa học và Công nghệ Giáo dục,Chuẩn,TRUE
+major_code,major_name,faculty_code,faculty_name,program_type,is_new_2026
+BF1,Biological Engineering,school-of-chemistry-and-life-sciences-scls,School of Chemistry and Life Sciences (SCLS),Standard,FALSE
+BF2,Food Engineering,school-of-chemistry-and-life-sciences-scls,School of Chemistry and Life Sciences (SCLS),Standard,FALSE
+CH1,Chemical Engineering,school-of-chemistry-and-life-sciences-scls,School of Chemistry and Life Sciences (SCLS),Standard,FALSE
+CH2,Chemistry,school-of-chemistry-and-life-sciences-scls,School of Chemistry and Life Sciences (SCLS),Standard,FALSE
+EV1,Environmental Engineering,school-of-chemistry-and-life-sciences-scls,School of Chemistry and Life Sciences (SCLS),Standard,FALSE
+EV2,Natural Resources and Environmental Management,school-of-chemistry-and-life-sciences-scls,School of Chemistry and Life Sciences (SCLS),Standard,FALSE
+BF-E12,Food Engineering (Advanced Program),school-of-chemistry-and-life-sciences-scls,School of Chemistry and Life Sciences (SCLS),Advanced,FALSE
+BF-E19,Biological Engineering (Advanced Program),school-of-chemistry-and-life-sciences-scls,School of Chemistry and Life Sciences (SCLS),Advanced,FALSE
+CH-E11,Pharmaceutical Engineering (Advanced Program),school-of-chemistry-and-life-sciences-scls,School of Chemistry and Life Sciences (SCLS),Advanced,FALSE
+CH-E20,Cosmetic Chemistry (Advanced Program),school-of-chemistry-and-life-sciences-scls,School of Chemistry and Life Sciences (SCLS),Advanced,TRUE
+EE1,Electrical Engineering,school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),Standard,FALSE
+EE2,Control and Automation Engineering,school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),Standard,FALSE
+ET1,Electronics and Telecommunications Engineering,school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),Standard,FALSE
+ET2,Biomedical Engineering,school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),Standard,FALSE
+EE-E8,Control and Automation Engineering (Advanced Program),school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),Advanced,FALSE
+EE-E18,Power Systems and Renewable Energy (Advanced Program),school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),Advanced,FALSE
+ET-E4,Electronics and Telecommunications Engineering (Advanced Program),school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),Advanced,FALSE
+ET-E5,Biomedical Engineering (Advanced Program),school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),Advanced,FALSE
+ET-E16,Digital Media and Multimedia Engineering (Advanced Program),school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),Advanced,FALSE
+ET-E9,Smart Embedded Systems and IoT (Intensive Japanese),school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),Intensive Language,FALSE
+ET-LUH,Electronics and Telecommunications – Leibniz University Hannover,school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),International Joint,FALSE
+EE-EP,Industrial Informatics and Automation (PFIEV),school-of-electrical-and-electronic-engineering-seee,School of Electrical and Electronic Engineering (SEEE),PFIEV,FALSE
+ME1,Mechatronics Engineering,school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),Standard,FALSE
+ME2,Mechanical Engineering,school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),Standard,FALSE
+HE1,Thermal Engineering,school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),Standard,FALSE
+TE1,Automotive Engineering,school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),Standard,FALSE
+TE2,Power Mechanical Engineering,school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),Standard,FALSE
+TE3,Aerospace Engineering,school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),Standard,FALSE
+ME-E1,Mechatronics Engineering (Advanced Program),school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),Advanced,FALSE
+TE-E2,Automotive Engineering (Advanced Program),school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),Advanced,FALSE
+ME-LUH,Mechatronics – Leibniz University Hannover,school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),International Joint,FALSE
+ME-NUT,Mechatronics – Nagaoka University of Technology,school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),International Joint,FALSE
+ME-GU,Mechanical Machine Manufacturing – Griffith University,school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),International Joint,FALSE
+TE-EP,Aeronautical Engineering (PFIEV),school-of-mechanical-engineering-sme,School of Mechanical Engineering (SME),PFIEV,FALSE
+IT1,Computer Science,school-of-information-and-communication-technology-soict,School of Information and Communication Technology (SoICT),Standard,FALSE
+IT2,Computer Engineering,school-of-information-and-communication-technology-soict,School of Information and Communication Technology (SoICT),Standard,FALSE
+IT-E7,Global ICT (Advanced Program),school-of-information-and-communication-technology-soict,School of Information and Communication Technology (SoICT),Advanced,FALSE
+IT-E10,Data Science and Artificial Intelligence (Advanced Program),school-of-information-and-communication-technology-soict,School of Information and Communication Technology (SoICT),Advanced,FALSE
+IT-E15,Cyber Security (Advanced Program),school-of-information-and-communication-technology-soict,School of Information and Communication Technology (SoICT),Advanced,FALSE
+IT-E6,Information Technology (Intensive Japanese),school-of-information-and-communication-technology-soict,School of Information and Communication Technology (SoICT),Intensive Language,FALSE
+IT-EP,Information Technology (Intensive French),school-of-information-and-communication-technology-soict,School of Information and Communication Technology (SoICT),Intensive Language,FALSE
+TROY-IT,Computer Science – Troy University (USA),school-of-information-and-communication-technology-soict,School of Information and Communication Technology (SoICT),International Joint,FALSE
+EM1,Energy Management,school-of-economics-and-management-sem,School of Economics and Management (SEM),Standard,FALSE
+EM2,Industrial Management,school-of-economics-and-management-sem,School of Economics and Management (SEM),Standard,FALSE
+EM3,Business Administration,school-of-economics-and-management-sem,School of Economics and Management (SEM),Standard,FALSE
+EM5,Finance and Banking,school-of-economics-and-management-sem,School of Economics and Management (SEM),Standard,FALSE
+EM-E13,Business Analytics (Advanced Program),school-of-economics-and-management-sem,School of Economics and Management (SEM),Advanced,FALSE
+EM-E14,Logistics and Supply Chain Management (Advanced Program),school-of-economics-and-management-sem,School of Economics and Management (SEM),Advanced,FALSE
+EM-E17,Accounting (Advanced Program),school-of-economics-and-management-sem,School of Economics and Management (SEM),Advanced,FALSE
+MS1,Materials Science and Engineering,school-of-materials-science-and-engineering-smse,School of Materials Science and Engineering (SMSE),Standard,FALSE
+MS2,Microelectronics and Nanotechnology,school-of-materials-science-and-engineering-smse,School of Materials Science and Engineering (SMSE),Standard,FALSE
+MS3,Polymer and Composite Materials Technology,school-of-materials-science-and-engineering-smse,School of Materials Science and Engineering (SMSE),Standard,FALSE
+MS5,Printing Technology,school-of-materials-science-and-engineering-smse,School of Materials Science and Engineering (SMSE),Standard,FALSE
+TX1,Textile and Garment Technology,school-of-materials-science-and-engineering-smse,School of Materials Science and Engineering (SMSE),Standard,FALSE
+MS-E3,Materials Science and Engineering (Advanced Program),school-of-materials-science-and-engineering-smse,School of Materials Science and Engineering (SMSE),Advanced,FALSE
+FL1,English for Science and Technology,school-of-foreign-languages-sofl,School of Foreign Languages (SOFL),Standard,FALSE
+FL3,Chinese for Science and Technology,school-of-foreign-languages-sofl,School of Foreign Languages (SOFL),Standard,FALSE
+FL4,Korean for Science and Technology,school-of-foreign-languages-sofl,School of Foreign Languages (SOFL),Standard,TRUE
+FL2,Professional International English – Plymouth Marjon University,school-of-foreign-languages-sofl,School of Foreign Languages (SOFL),International Joint,FALSE
+MI1,Mathematics and Informatics,school-of-applied-mathematics-and-informatics-sami,School of Applied Mathematics and Informatics (SAMI),Standard,FALSE
+MI2,Management Information Systems,school-of-applied-mathematics-and-informatics-sami,School of Applied Mathematics and Informatics (SAMI),Standard,FALSE
+MI-E22,Computational Science for Intelligent Systems (Advanced Program),school-of-applied-mathematics-and-informatics-sami,School of Applied Mathematics and Informatics (SAMI),Advanced,TRUE
+PH1,Engineering Physics,faculty-of-engineering-physics-fep,Faculty of Engineering Physics (FEP),Standard,FALSE
+PH2,Nuclear Engineering,faculty-of-engineering-physics-fep,Faculty of Engineering Physics (FEP),Standard,FALSE
+PH3,Medical Physics,faculty-of-engineering-physics-fep,Faculty of Engineering Physics (FEP),Standard,FALSE
+ED2,Educational Technology,faculty-of-educational-science-and-technology-fest,Faculty of Educational Science and Technology (FEST),Standard,FALSE
+ED3,Education Management,faculty-of-educational-science-and-technology-fest,Faculty of Educational Science and Technology (FEST),Standard,FALSE
+ED5,Industrial and Organizational Psychology,faculty-of-educational-science-and-technology-fest,Faculty of Educational Science and Technology (FEST),Standard,TRUE

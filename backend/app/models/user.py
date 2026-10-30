@@ -62,7 +62,7 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     profile: Mapped["Profile | None"] = relationship(
-        back_populates="user", uselist=False
+        back_populates="user", uselist=False, lazy="selectin"
     )
     conversations_as_a: Mapped[list["Conversation"]] = relationship(
         back_populates="participant_a", foreign_keys="Conversation.user_a"
