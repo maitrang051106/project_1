@@ -151,3 +151,14 @@ Giữ ADR cũ để lưu lịch sử; quyết định mới hơn ghi rõ mục n
   - Tối đa 3 kết nối WebSocket đồng thời / tài khoản (`MAX_WS_CONNECTIONS_PER_USER = 3`).
   - Tối đa 10 kết nối WebSocket đồng thời / IP (`MAX_WS_CONNECTIONS_PER_IP = 10`).
   - Được quản lý nguyên tử bằng Lua script trên Redis kèm TTL 24h tự dọn dẹp, giải phóng tức thì khi socket đóng (`finally`). Vượt quá giới hạn sẽ bị đóng với mã `WS_1008_POLICY_VIOLATION`.
+
+## ADR-021: Localize HUST Catalog to English, Cascading Major Selection, and Column Length Expansion
+- Ngày: 2026-10-30 | Trạng thái: Chấp nhận
+- **Tiếng Anh hóa Catalog & Giao diện**:
+  - Dịch toàn bộ danh mục 68 ngành đào tạo và 10 Trường/Viện/Khoa HUST sang tiếng Anh chính thức trong các file CSV seed (`hust-68-nganh-2026.csv`, `hust-schools-2026.csv`).
+  - Giao diện Onboarding và Matching chuyển hoàn toàn sang tiếng Anh.
+- **Cascading Onboarding Selection**:
+  - Chuyển giao diện chọn ngành từ ô input tìm kiếm sang bộ chọn 2 bước phân cấp: Chọn School/Faculty/Institute trước -> Chọn Academic Major thuộc đơn vị đó.
+  - Cung cấp module catalog tĩnh (`frontend/src/lib/hustCatalog.js`) làm fallback dự phòng tức thì cho frontend.
+- **Mở rộng cột `faculty_code`**:
+  - Do mã định danh slug tiếng Anh của các trường dài hơn 20 ký tự (ví dụ `school-of-information-and-communication-technology-soict` dài 47 ký tự), mở rộng cột `faculty_code` trong bảng `profiles` lên `VARCHAR(100)` qua Alembic migration `0004_expand_faculty_code`.

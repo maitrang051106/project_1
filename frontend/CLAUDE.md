@@ -12,9 +12,8 @@ onboarding → matching → chat. Dùng React Router và Zustand.
 - Render tin nhắn dạng text; không dùng `dangerouslySetInnerHTML`.
 - `ProtectedRoute` gọi `/me`; 401 thì chuyển về `/login`.
 - WebSocket tự kết nối lại; dùng `wss://` trên HTTPS và hiển thị trạng thái
-  peer. Nội dung UI tiếng Việt, responsive, ưu tiên mobile.
-- Onboarding (Giới tính, Ngành, Khóa K63–K71) và Matching (3 bộ lọc cứng) tuân theo
-  [QUESTIONNAIRE.md](../docs/QUESTIONNAIRE.md).
+  peer. Giao diện toàn hệ thống tiếng Anh, responsive, ưu tiên mobile.
+- Onboarding (Gender, School/Faculty -> Major cascading select, Cohort K63–K71) và Matching (3 bộ lọc cứng) tuân theo [SYSTEM_FLOWS.md](../docs/SYSTEM_FLOWS.md).
 
 ## Cấu hình
 Dev proxy `/api` qua Vite. Deploy Vercel: Root `frontend`, build `npm run build`,

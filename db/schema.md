@@ -89,8 +89,8 @@ erDiagram
 | Column | Type | Meaning |
 |---|---|---|
 | `user_id` | `INT PK/FK` | Primary Key, References `users.id` (CASCADE) |
-| `gender` | `VARCHAR(10)` | Gender: `nam` (Male) or `nu` (Female) |
-| `faculty_code` | `VARCHAR(20)` | HUST School/Faculty code |
+| `gender` | `VARCHAR(10)` | Gender: `male` or `female` |
+| `faculty_code` | `VARCHAR(100)` | HUST School/Faculty slug code (English) |
 | `major_code` | `VARCHAR(20)` | HUST Major code from 68 catalog |
 | `cohort` | `INT` | Academic cohort between K63 and K71 (63..71) |
 | `updated_at` | `DATETIME` | Last profile update timestamp |

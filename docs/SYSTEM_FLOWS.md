@@ -284,14 +284,14 @@ sequenceDiagram
     User->>UI: Truy cập trang /onboarding
     UI->>ProfAPI: GET /profile/catalog
     ProfAPI->>CatService: Lấy danh mục 68 ngành học chuẩn HUST
-    CatService-->>ProfAPI: Danh sách 68 ngành (Mã ngành, Tên ngành, Mã Viện, Tên Viện)
+    CatService-->>ProfAPI: Danh sách 68 ngành Tiếng Anh (Mã ngành, Tên ngành, Mã Đơn vị, Tên Trường/Khoa)
     ProfAPI-->>UI: 200 OK (JSON catalog)
     UI->>ProfAPI: GET /profile/me
     ProfAPI->>DB: Lấy hồ sơ hiện tại (nếu đã tạo)
     DB-->>ProfAPI: Trả về Profile hoặc 404
     ProfAPI-->>UI: Hiển thị dữ liệu hồ sơ lên Form
 
-    User->>UI: Chọn Giới tính, Tìm kiếm & Chọn Ngành học, Chọn Khóa (K63-K71), Đổi Nickname/Avatar
+    User->>UI: Chọn Giới tính, Chọn Trường/Viện/Khoa -> Ngành học (Cascading Select), Chọn Khóa (K63-K71), Đổi Nickname/Avatar
     UI->>ProfAPI: POST /profile { gender, major_code, cohort, nickname, avatar }
     ProfAPI->>ProfAPI: Kiểm tra gender (male/female)
     ProfAPI->>CatService: Kiểm tra major_code có thuộc 68 ngành HUST không

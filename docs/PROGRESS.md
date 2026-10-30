@@ -146,3 +146,19 @@
   - Đạt 45/45 unit tests pass trong `backend/tests` (bao gồm các test case cho session revocation, ws slot limits, và production 503 outage).
   - 3/3 frontend tests pass.
   - Alembic duy trì một head duy nhất (`0003_friendship_requester`).
+
+### Chuẩn hóa Tiếng Anh Catalog HUST & Nâng cấp Onboarding – 30/10/2026
+- **Giao diện & Trải nghiệm (Onboarding & Matching)**:
+  - Chuyển ô nhập text tìm kiếm ngành thành bộ chọn phân cấp liên hoàn: School / Faculty / Institute -> Academic Major.
+  - Bổ sung module tĩnh `hustCatalog.js` tại frontend làm fallback tức thì, giúp dropdown luôn sẵn sàng khi mở trang.
+  - Tiếng Anh hóa toàn bộ nhãn, thông báo và nút bấm trên giao diện Onboarding và Matching.
+- **Backend & Cơ sở dữ liệu**:
+  - Loại bỏ ký tự BOM UTF-8 (`\ufeff`) ở file seed CSV, chuyển `catalog.py` sang dùng `utf-8-sig` và đường dẫn linh hoạt.
+  - Mở rộng độ dài cột `profiles.faculty_code` từ `VARCHAR(20)` lên `VARCHAR(100)` trong MySQL và SQLAlchemy Model để chứa các slug tiếng Anh dài.
+  - Tạo migration Alembic `0004_expand_faculty_code` (head mới của Alembic).
+  - Cập nhật toàn bộ 68 ngành và 10 đơn vị trong `hust-68-nganh-2026.csv` và `hust-schools-2026.csv` sang tiếng Anh.
+  - Đồng bộ dữ liệu hồ sơ hiện có trong DB sang mã slug tiếng Anh mới.
+- **Kiểm thử**:
+  - Frontend test và Vite production build đạt 100%.
+  - Backend pytest đạt 27/27 tests passed.
+  - Alembic duy trì một head duy nhất (`0004_expand_faculty_code`).

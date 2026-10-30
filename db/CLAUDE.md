@@ -2,7 +2,7 @@
 
 Đọc [hướng dẫn gốc](../CLAUDE.md). Migration ở `backend/migrations/`;
 questionnaire và matching có nguồn chuẩn tại
-[QUESTIONNAIRE.md](../docs/QUESTIONNAIRE.md).
+[SYSTEM_FLOWS.md](../docs/SYSTEM_FLOWS.md).
 
 ## Tài liệu
 
@@ -12,7 +12,7 @@ questionnaire và matching có nguồn chuẩn tại
 ## Mô hình dữ liệu mục tiêu
 
 - `users`: `email_hash`, tên ẩn danh, trust, trạng thái, vai trò.
-- `profiles`: `gender` (nam/nu), `faculty_code`, `major_code`, `cohort` (K63–K71).
+- `profiles`: `gender` (male/female), `faculty_code` (VARCHAR(100) slug tiếng Anh), `major_code`, `cohort` (K63–K71).
 
 - `faculties`/`majors`: catalog School và ngành; mỗi ngành thuộc một đơn vị.
 - `conversations` và bảng report/trust/block/appeal: xem schema.

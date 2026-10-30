@@ -53,7 +53,7 @@ macOS/Linux: tạo môi trường bằng `python3 -m venv .venv` và kích hoạ
 - Quy tắc bắt đầu: [CLAUDE.md](CLAUDE.md)
 - [Trạng thái](docs/PROGRESS.md) · [Kiến trúc](docs/ARCHITECTURE.md) ·
   [Quyết định](docs/DECISIONS.md) · [Roadmap](docs/PLAN.md)
-- [Questionnaire/matching](docs/QUESTIONNAIRE.md) ·
+- [Luồng hệ thống](docs/SYSTEM_FLOWS.md) ·
   [Deploy](docs/DEPLOY.md) · [Sự cố](docs/TROUBLESHOOTING.md)
 - [Backend](backend/CLAUDE.md) · [Frontend](frontend/CLAUDE.md) ·
   [Database](db/CLAUDE.md)
