@@ -167,7 +167,7 @@ export default function Onboarding() {
             1. Your Nickname
           </label>
           <p className="text-xs text-slate-500 mb-2">
-            Your name for anonymous conversations
+            💡 This nickname and avatar will be shown to your anonymous chat partners.
           </p>
           <input
             type="text"

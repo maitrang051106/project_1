@@ -31,13 +31,17 @@ async def redis_unavailable_handler(request: Request, exc: RedisUnavailable):
     )
 
 # CORS configuration supporting credentials (cookies)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+cors_kwargs = {
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+if settings.environment != "production":
+    cors_kwargs["allow_origin_regex"] = r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$"
+else:
+    cors_kwargs["allow_origins"] = settings.allowed_origins
+
+app.add_middleware(CORSMiddleware, **cors_kwargs)
 
 # Register routers with /api prefix
 app.include_router(health_router)
@@ -48,8 +52,8 @@ app.include_router(chat_router, prefix="/api")
 app.include_router(direct_messages_router, prefix="/api")
 
 # Also support direct paths without /api prefix
-app.include_router(auth_router)
-app.include_router(profile_router)
-app.include_router(matching_router)
-app.include_router(chat_router)
-app.include_router(direct_messages_router)
+app.include_router(auth_router, include_in_schema=False)
+app.include_router(profile_router, include_in_schema=False)
+app.include_router(matching_router, include_in_schema=False)
+app.include_router(chat_router, include_in_schema=False)
+app.include_router(direct_messages_router, include_in_schema=False)

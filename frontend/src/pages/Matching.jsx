@@ -21,6 +21,18 @@ export default function Matching() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Check if user already has an active (non-ended) conversation
+  useEffect(() => {
+    apiFetch("/match/active-room")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.has_active && data.room_id) {
+          navigate(`/chat/${data.room_id}`);
+        }
+      })
+      .catch(() => {});
+  }, [navigate]);
+
   // Polling queue status while searching
   useEffect(() => {
     let interval;

@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from fastapi import Cookie, Depends, Header, HTTPException, Request, WebSocket, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +30,21 @@ def get_client_ip(request: Request | WebSocket) -> str:
 
 
 def is_allowed_websocket_origin(origin: str | None) -> bool:
-    return origin is not None and origin in settings.allowed_origins
+    if not origin:
+        return False
+    if origin in settings.allowed_origins:
+        return True
+    if settings.environment != "production":
+        parsed = urlparse(origin)
+        host = parsed.hostname or ""
+        if (
+            host in ("localhost", "127.0.0.1")
+            or host.startswith("192.168.")
+            or host.startswith("10.")
+            or host.startswith("172.")
+        ):
+            return True
+    return False
 
 
 async def get_current_user(

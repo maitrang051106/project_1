@@ -55,6 +55,26 @@ async def _has_active_conversation(db: AsyncSession, user_id: int) -> bool:
     return result.scalar_one_or_none() is not None
 
 
+@router.get("/active-room")
+async def get_active_room(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Return the user's current non-ended conversation room, if one exists."""
+    result = await db.execute(
+        select(Conversation.id)
+        .where(
+            or_(Conversation.user_a == user.id, Conversation.user_b == user.id),
+            Conversation.ended_at.is_(None),
+        )
+        .limit(1)
+    )
+    room_id = result.scalar_one_or_none()
+    if room_id:
+        return {"has_active": True, "room_id": room_id}
+    return {"has_active": False, "room_id": None}
+
+
 @router.post("/join", response_model=MatchResultOut)
 async def join_matching(
     payload: MatchJoinIn,
@@ -213,7 +233,7 @@ async def join_matching(
                 conv = Conversation(
                     user_a=user.id,
                     user_b=cand_user_id,
-                    type=ConversationType.HUMAN,
+                    conversation_type=ConversationType.HUMAN,
                 )
                 db.add(conv)
                 await db.commit()

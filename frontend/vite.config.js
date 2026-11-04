@@ -15,6 +15,11 @@ export default defineConfig(({ mode }) => {
               changeOrigin: true,
               rewrite: (path) => path.replace(/^\/api/, ""),
             },
+            "/ws": {
+              target: env.VITE_DEV_API_TARGET,
+              ws: true,
+              changeOrigin: true,
+            },
           }
         : {},
     },

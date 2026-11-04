@@ -4,7 +4,7 @@ import app.main
 
 
 def test_import_app_main_and_routes():
-    """Verify that app.main and all attached routers load without error."""
+    """Verify that app.main and all attached routers load without error and do not expose debug routes."""
     assert app.main.app is not None
     assert app.main.app.title == "HUST Chatbox API"
     paths = app.main.app.openapi()["paths"]
@@ -12,6 +12,7 @@ def test_import_app_main_and_routes():
     assert "/api/auth/register" in paths
     assert "/api/profile" in paths
     assert "/api/match/join" in paths
+    assert "/api/debug-meta" not in paths
 
 
 def test_session_local_proxy_is_callable(monkeypatch):
@@ -26,4 +27,3 @@ def test_session_local_proxy_is_callable(monkeypatch):
     session = SessionLocal()
     assert session is mock_session
     mock_factory.assert_called_once()
-

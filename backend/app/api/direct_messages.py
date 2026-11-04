@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import time
 from typing import Any
 
 from fastapi import (
@@ -13,8 +12,7 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-from pydantic import BaseModel, Field
-from sqlalchemy import and_, desc, or_, select
+from sqlalchemy import and_, case, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_client_ip, get_current_user, is_allowed_websocket_origin
@@ -37,79 +35,102 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["direct_messages"])
 
 
-class SendDirectMessageIn(BaseModel):
-    content: str = Field(..., min_length=1, max_length=MAX_DIRECT_MESSAGE_LENGTH)
-
-
 @router.get("/friends")
 async def get_friends(
-    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
-) -> list[dict[str, Any]]:
-    """Return all accepted friends of the current user with latest message info."""
-    stmt = select(Friendship).where(
-        and_(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Return paginated friends of the current user with their latest message info.
+    Eliminates N+1 queries by using a single window function SQL query.
+    """
+    partner_id_expr = case(
+        (DirectMessage.sender_id == user.id, DirectMessage.receiver_id),
+        else_=DirectMessage.sender_id,
+    ).label("partner_id")
+
+    # Subquery: Rank direct messages involving current user by created_at desc per partner
+    subq = (
+        select(
+            DirectMessage.content.label("last_msg_content"),
+            DirectMessage.created_at.label("last_msg_at"),
+            partner_id_expr,
+            func.row_number().over(
+                partition_by=partner_id_expr,
+                order_by=DirectMessage.created_at.desc(),
+            ).label("rn"),
+        )
+        .where(or_(DirectMessage.sender_id == user.id, DirectMessage.receiver_id == user.id))
+        .subquery()
+    )
+
+    friend_id_expr = case(
+        (Friendship.user_a == user.id, Friendship.user_b),
+        else_=Friendship.user_a,
+    ).label("friend_id")
+
+    # Main query joining Friendship, User, and the ranked latest message subquery
+    stmt = (
+        select(
+            User,
+            subq.c.last_msg_content,
+            subq.c.last_msg_at,
+        )
+        .select_from(Friendship)
+        .join(
+            User,
+            User.id == friend_id_expr,
+        )
+        .outerjoin(
+            subq,
+            and_(
+                subq.c.partner_id == User.id,
+                subq.c.rn == 1,
+            ),
+        )
+        .where(
             or_(Friendship.user_a == user.id, Friendship.user_b == user.id),
             Friendship.status == "accepted",
         )
+        .order_by(func.coalesce(subq.c.last_msg_at, Friendship.created_at).desc())
+        .offset(offset)
+        .limit(limit + 1)
     )
+
     res = await db.execute(stmt)
-    friendships = res.scalars().all()
+    rows = res.all()
 
-    if not friendships:
-        return []
+    has_more = len(rows) > limit
+    paged_rows = rows[:limit]
 
-    friend_ids = [
-        f.user_b if f.user_a == user.id else f.user_a for f in friendships
+    friends_data = [
+        {
+            "id": friend_user.id,
+            "email": friend_user.email,
+            "nickname": friend_user.nickname,
+            "avatar": friend_user.avatar or DEFAULT_AVATAR,
+            "last_message": last_msg_content,
+            "last_message_at": last_msg_at.isoformat() if last_msg_at else None,
+        }
+        for friend_user, last_msg_content, last_msg_at in paged_rows
     ]
 
-    u_stmt = select(User).where(User.id.in_(friend_ids))
-    u_res = await db.execute(u_stmt)
-    friends_map = {u.id: u for u in u_res.scalars().all()}
-
-    result = []
-    for friend_id in friend_ids:
-        friend_user = friends_map.get(friend_id)
-        if not friend_user:
-            continue
-
-        # Get latest message
-        msg_stmt = (
-            select(DirectMessage)
-            .where(
-                or_(
-                    and_(DirectMessage.sender_id == user.id, DirectMessage.receiver_id == friend_id),
-                    and_(DirectMessage.sender_id == friend_id, DirectMessage.receiver_id == user.id),
-                )
-            )
-            .order_by(desc(DirectMessage.created_at))
-            .limit(1)
-        )
-        msg_res = await db.execute(msg_stmt)
-        last_msg = msg_res.scalar_one_or_none()
-
-        result.append(
-            {
-                "id": friend_user.id,
-                "email": friend_user.email,
-                "nickname": friend_user.nickname,
-                "avatar": friend_user.avatar,
-                "last_message": last_msg.content if last_msg else None,
-                "last_message_at": last_msg.created_at.isoformat() if last_msg else None,
-            }
-        )
-
-    # Sort friends by last message time (most recent first)
-    result.sort(key=lambda x: x["last_message_at"] or "", reverse=True)
-    return result
+    return {
+        "friends": friends_data,
+        "has_more": has_more,
+    }
 
 
 @router.get("/messages/{friend_id}")
 async def get_messages(
     friend_id: int,
+    limit: int = Query(default=20, ge=1, le=100),
+    before_id: int | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> list[dict[str, Any]]:
-    """Retrieve direct message history between user and friend."""
+) -> dict[str, Any]:
+    """Retrieve cursor-paginated direct message history between user and friend."""
     f_check = await db.execute(
         select(Friendship).where(
             and_(
@@ -135,72 +156,33 @@ async def get_messages(
                 and_(DirectMessage.sender_id == friend_id, DirectMessage.receiver_id == user.id),
             )
         )
-        .order_by(DirectMessage.created_at.asc())
     )
+    if before_id is not None:
+        stmt = stmt.where(DirectMessage.id < before_id)
+
+    stmt = stmt.order_by(DirectMessage.id.desc()).limit(limit + 1)
     res = await db.execute(stmt)
     messages = res.scalars().all()
 
-    return [
-        {
-            "id": m.id,
-            "sender_id": m.sender_id,
-            "receiver_id": m.receiver_id,
-            "content": m.content,
-            "is_read": m.is_read,
-            "created_at": m.created_at.isoformat(),
-        }
-        for m in messages
-    ]
+    has_more = len(messages) > limit
+    paged_messages = list(messages[:limit])
+    # Reverse to chronological order (oldest -> newest) for display
+    paged_messages.reverse()
 
-
-@router.post("/messages/{friend_id}")
-async def send_direct_message(
-    friend_id: int,
-    payload: SendDirectMessageIn,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> dict[str, Any]:
-    """Send a direct message to a friend and broadcast via Redis/In-memory store."""
-    f_check = await db.execute(
-        select(Friendship).where(
-            and_(
-                or_(
-                    (Friendship.user_a == user.id) & (Friendship.user_b == friend_id),
-                    (Friendship.user_a == friend_id) & (Friendship.user_b == user.id),
-                ),
-                Friendship.status == "accepted",
-            )
-        )
-    )
-    if not f_check.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only send messages to accepted friends.",
-        )
-
-    dm = DirectMessage(
-        sender_id=user.id,
-        receiver_id=friend_id,
-        content=payload.content.strip(),
-    )
-    db.add(dm)
-    await db.commit()
-    await db.refresh(dm)
-
-    room_key = f"dm_{min(user.id, friend_id)}_{max(user.id, friend_id)}"
-    msg_dict = {
-        "type": "direct_message",
-        "id": dm.id,
-        "sender_id": dm.sender_id,
-        "receiver_id": dm.receiver_id,
-        "content": dm.content,
-        "created_at": dm.created_at.isoformat(),
-        "sender_name": user.nickname,
-        "sender_avatar": user.avatar,
+    return {
+        "messages": [
+            {
+                "id": m.id,
+                "sender_id": m.sender_id,
+                "receiver_id": m.receiver_id,
+                "content": m.content,
+                "is_read": m.is_read,
+                "created_at": m.created_at.isoformat(),
+            }
+            for m in paged_messages
+        ],
+        "has_more": has_more,
     }
-    await store_service.broadcast_to_room(room_key, msg_dict)
-
-    return msg_dict
 
 
 @router.websocket("/ws/direct/{friend_id}")
@@ -234,18 +216,7 @@ async def direct_message_websocket(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    client_ip = get_client_ip(websocket)
-    slot_ok, slot_reason = await store_service.acquire_ws_slot(
-        user_id=user_id,
-        client_ip=client_ip,
-        max_user=MAX_WS_CONNECTIONS_PER_USER,
-        max_ip=MAX_WS_CONNECTIONS_PER_IP,
-    )
-    if not slot_ok:
-        logger.warning("Rejecting direct WS for user %s: %s", user_id, slot_reason)
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
-
+    # 2. Check friendship & user eligibility before acquiring any WS slot
     async with SessionLocal() as db:
         f_check = await db.execute(
             select(Friendship).where(
@@ -274,6 +245,19 @@ async def direct_message_websocket(
         nickname = user.nickname
         avatar = user.avatar or DEFAULT_AVATAR
 
+    # 3. Acquire WebSocket connection slot (guaranteed to be released in finally)
+    client_ip = get_client_ip(websocket)
+    slot_ok, slot_reason = await store_service.acquire_ws_slot(
+        user_id=user_id,
+        client_ip=client_ip,
+        max_user=MAX_WS_CONNECTIONS_PER_USER,
+        max_ip=MAX_WS_CONNECTIONS_PER_IP,
+    )
+    if not slot_ok:
+        logger.warning("Rejecting direct WS for user %s: %s", user_id, slot_reason)
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await websocket.accept()
 
     room_key = f"dm_{min(user_id, friend_id)}_{max(user_id, friend_id)}"
@@ -292,10 +276,11 @@ async def direct_message_websocket(
     try:
         while True:
             raw_text = await websocket.receive_text()
-            if not raw_text.strip():
+            stripped = raw_text.strip()
+            if not stripped:
                 continue
 
-            content = raw_text[:MAX_DIRECT_MESSAGE_LENGTH]
+            content = stripped[:MAX_DIRECT_MESSAGE_LENGTH]
             async with SessionLocal() as db:
                 dm = DirectMessage(
                     sender_id=user_id,
@@ -326,4 +311,3 @@ async def direct_message_websocket(
         send_task.cancel()
         await store_service.unsubscribe_room(room_key, listener_queue)
         await store_service.release_ws_slot(user_id=user_id, client_ip=client_ip)
-

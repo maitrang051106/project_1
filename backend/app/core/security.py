@@ -7,20 +7,7 @@ import secrets
 import jwt
 
 from app.core.config import settings
-from app.core.constants import ALLOWED_EMAIL_DOMAINS
-
-ALLOWED_DOMAINS = ALLOWED_EMAIL_DOMAINS
-
-ANON_ADJECTIVES = [
-    "Brave", "Curious", "Silent", "Midnight", "Cheerful",
-    "Diligent", "Mystic", "Clever", "Swift", "Resilient"
-]
-
-ANON_NOUNS = [
-    "Owl", "Phoenix", "Sparrow", "Falcon", "Panda",
-    "Engineer", "Coder", "Scholar", "Explorer", "Seeker"
-]
-
+from app.core.constants import ALLOWED_EMAIL_DOMAINS, ANON_ADJECTIVES, ANON_NOUNS
 
 def normalize_email(email: str) -> str:
     """Normalize email: lowercase and strip whitespace."""
@@ -33,7 +20,7 @@ def is_valid_hust_email(email: str) -> bool:
     if "@" not in norm:
         return False
     domain = norm.split("@")[-1]
-    return domain in ALLOWED_DOMAINS
+    return domain in ALLOWED_EMAIL_DOMAINS
 
 
 def hash_password(password: str) -> str:

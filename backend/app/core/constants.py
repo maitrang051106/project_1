@@ -23,3 +23,12 @@ AVATAR_OPTIONS = (
     "🦉", "🐱", "🐸", "🐶", "🐵", "🐰", "🐻", "🐧", "🐹", "🦊", "🐼"
 )
 
+ANON_ADJECTIVES = [
+    "Brave", "Curious", "Silent", "Midnight", "Cheerful",
+    "Diligent", "Mystic", "Clever", "Swift", "Resilient"
+]
+
+ANON_NOUNS = [
+    "Owl", "Phoenix", "Sparrow", "Falcon", "Panda",
+    "Engineer", "Coder", "Scholar", "Explorer", "Seeker"
+]

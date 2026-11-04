@@ -13,3 +13,13 @@ export function apiFetch(path, options = {}) {
     },
   });
 }
+
+export function buildWsUrl(path) {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  let baseWsUrl = import.meta.env.VITE_WS_URL;
+  if (!baseWsUrl) {
+    const loc = window.location;
+    baseWsUrl = (loc.protocol === "https:" ? "wss://" : "ws://") + loc.host;
+  }
+  return `${baseWsUrl.replace(/\/+$/, "")}${normalizedPath}`;
+}

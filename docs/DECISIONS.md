@@ -1,164 +1,74 @@
-# Quyết định kỹ thuật
+# Nhật ký Quyết định Kiến trúc (Architecture Decision Records — ADRs)
 
-Giữ ADR cũ để lưu lịch sử; quyết định mới hơn ghi rõ mục nào được thay thế.
+Tài liệu này lưu trữ các quyết định kỹ thuật và sản phẩm của dự án **HUST Match**. Phần 1 liệt kê **các ADR đang có hiệu lực thi hành** (từ mới nhất đến nền tảng); Phần 2 lưu trữ tóm tắt các ADR ban đầu đã được thay thế (`[Superseded]`) để AI Agent không bị nhiễu bởi quy tắc cũ.
 
-## ADR-001: Chỉ dùng Python (FastAPI) cho backend
-- Trạng thái: Chấp nhận
-- Chọn FastAPI thay vì backend Node.js để giảm số công nghệ và dùng chung hệ
-  sinh thái Python. Dùng WebSocket gốc và Redis Pub/Sub.
+---
 
-## ADR-002: Đăng nhập bằng email @hust.edu.vn + OTP, bỏ Microsoft Entra ID
-- Trạng thái: Chấp nhận
-- Dùng OTP 6 số qua email trường, không dùng Entra ID/mật khẩu. OTP chứng minh
-  quyền truy cập hộp thư, không xác minh họ tên; email có thể vào thư rác.
+## Phần 1: Các Quyết định Kiến trúc Đang Có Hiệu Lực (Active ADRs)
 
-## ADR-003: OTP lưu ở Redis dưới dạng băm HMAC
-- Trạng thái: Chấp nhận
-- Lưu HMAC trong Redis với TTL; so sánh bằng `hmac.compare_digest`. Bảo vệ
-  `OTP_SECRET`; đổi khóa làm mất hiệu lực OTP đang chờ.
+### ADR-021: Lưu lịch sử Chat ẩn danh 24h trên Redis, Đồng nhất DM WebSocket & Chuyển tiếp Kết bạn (2026-11-03)
+- **Trạng thái**: Đang áp dụng (Active)
+- **Bối cảnh**: Khi người dùng F5 hoặc rớt mạng tạm thời trong phòng chat ẩn danh, toàn bộ tin nhắn biến mất và kết nối Pub/Sub của phòng bị hủy. Đồng thời, phần Direct Messages tồn tại song song cả REST `POST /messages/{friend_id}` lẫn WebSocket, truy vấn `GET /friends` bị N+1 query, và phòng ẩn danh chưa tự chuyển sang `/messages` khi kết bạn thành công.
+- **Quyết định**:
+  1. **Giữ sống Pub/Sub khi F5 & Lưu lịch sử ẩn danh 24h trên Redis**: `unsubscribe_room()` chỉ gỡ queue của socket vừa đóng mà không hủy task Redis Pub/Sub của phòng; chỉ hủy trong `cancel_room_pubsub()` khi phòng thực sự đóng (`ended_at`). Tin nhắn phòng ẩn danh được lưu vào Redis List `hust:v1:chat:history:{room_id}` (TTL 24h = `86400s`) và tải qua API gộp `GET /conversations/{room_id}/init` kèm phân trang cursor `before_timestamp`.
+  2. **Bảo mật phòng ẩn danh & Tự động chuyển sang `/messages` khi kết bạn**: Trong phòng ẩn danh, `opponent.email` luôn là `None` và không trả cờ `is_friend`. Khi 2 bên đồng ý kết bạn (hoặc vốn đã là bạn bè mà bấm kết bạn), hệ thống tự động kết thúc phòng ẩn danh (`ended_at = NOW()`), phát sự kiện `friend_accepted` và đếm ngược 2s đưa cả hai sang `/messages`. Tin nhắn trong phòng ẩn danh **không chép** sang bảng `direct_messages`.
+  3. **Tách biệt kênh Pub/Sub & Bỏ `POST /messages/{friend_id}`**: Kênh Pub/Sub tách thành `hust:v1:channel:match:{room_id}` và `hust:v1:channel:dm:{low}_{high}`. Xóa endpoint `POST /messages/{friend_id}`, thống nhất gửi tin nhắn bạn bè 100% qua `/ws/direct/{friend_id}`.
+  4. **Khử N+1 Query & Vá rò rỉ WS Slot**: Dùng SQL Window Function `ROW_NUMBER() OVER (PARTITION BY partner_id ORDER BY created_at DESC)` trong `GET /friends`. Bắt buộc kiểm tra điều kiện DB (`ended_at is None` / `Friendship.status == 'accepted'`) **trước khi** gọi `acquire_ws_slot` ở cả 2 cổng WebSocket.
 
-## ADR-004: Không kiểm duyệt AI từng tin nhắn
-- Trạng thái: Chấp nhận; cách xử lý report/trust được cập nhật bởi ADR-009/012
-- Không quét từng tin để giảm độ trễ, chi phí và chia sẻ dữ liệu. Rủi ro: hành
-  vi xấu chỉ được xử lý sau report; hỗ trợ report, block và rate limit.
+### ADR-020: Chính sách Fail-Fast HTTP 503 khi mất Redis trên Production (2026-10-28)
+- **Trạng thái**: Đang áp dụng (Active)
+- **Quyết định**:
+  1. Khi `ENVIRONMENT=production`, nếu Redis không kết nối được lúc khởi động hoặc gặp lỗi trong quá trình chạy, `StoreService` ném `RedisUnavailable` và trả về **HTTP `503 Service Unavailable`** (không fallback sang bộ nhớ RAM của từng tiến trình để tránh lỗi split-brain cho OTP, rate-limit, session và hàng đợi).
+  2. Chỉ cho phép fallback sang in-memory store ở môi trường `development` và `test`.
 
-## ADR-005: Không lưu nội dung tin nhắn
-- Trạng thái: Thay thế một phần bởi ADR-009
-- Không lưu lịch sử chat để bảo vệ riêng tư. Bản evidence mã hóa, có mục đích
-  và TTL giới hạn được cho phép theo ADR-009.
+### ADR-019: Hợp đồng Hàng đợi Ghép đôi 60s & Cột `requested_by` cho Kết bạn (2026-10-28)
+- **Trạng thái**: Đang áp dụng (Active)
+- **Quyết định**:
+  1. **Ghép đôi nguyên tử & Timeout 60s**: Sử dụng Redis Lua Script (`RESERVE_CANDIDATE_LUA`) để giữ chỗ ứng viên nguyên tử, kiểm tra lại hạn mức `trust_score`/ngày trong giao dịch MySQL `SELECT ... FOR UPDATE`, và tự động chuyển sang trạng thái `not_found` (`hust:v1:match:terminal:{user_id}`) khi chờ đủ 60s.
+  2. **Chống tự chấp nhận lời mời kết bạn**: Bổ sung cột `requested_by` vào bảng `friendships` (migration `0003`). Chỉ người nhận (`responder_id != requested_by`) mới có quyền phản hồi lời mời đang `pending`. Nếu người nhận cũng bấm nút `Add Friend` khi đã có lời mời `pending` từ đối phương, hệ thống coi là đồng thuận 2 chiều và chuyển thẳng sang `accepted`.
 
-## ADR-006: Ghép cặp bằng Cosine Similarity trên vector multi-hot + ghép tham lam
-- Trạng thái: Thay thế bởi ADR-010
-- Phương án ban đầu: cosine trên vector multi-hot và greedy matching. Đã thay
-  bằng hard filters + weighted score theo ADR-010/013.
+### ADR-018: Hardening Bảo mật Xác thực, Tách biệt OTP Domain & Giới hạn Slot WebSocket (2026-10-28)
+- **Trạng thái**: Đang áp dụng (Active)
+- **Quyết định**:
+  1. **Quản lý cấu hình (`config.py`)**: Đọc biến môi trường từ `.env` và `backend/.env`; khi `ENVIRONMENT=production`, bắt buộc khai báo đủ biến, các secret (`OTP_SECRET`, `EMAIL_HASH_SECRET`, `JWT_SECRET`) phải dài tối thiểu 32 bytes, và bắt buộc `COOKIE_SECURE=true`, `COOKIE_SAMESITE=none`.
+  2. **Phân tách tầng (`app/schemas/`, `app/services/`)**: Tách toàn bộ Pydantic schemas vào `app/schemas/`, tách logic xác thực vào `app/services/auth_service.py` và gửi mail vào `app/services/email_service.py`.
+  3. **Bảo mật OTP & Session (`jti`)**: Khóa HMAC của OTP được phân tách theo mục đích (`purpose="register"` vs `purpose="reset"`). Mỗi JWT phát hành đều chứa `jti` lưu trong Redis để thu hồi ngay khi đăng xuất hoặc đổi mật khẩu.
+  4. **Giới hạn kết nối WebSocket**: Tối đa `3` kết nối đồng thời trên mỗi `user_id` và `10` kết nối đồng thời trên mỗi `client_ip` thông qua Lua Script trong `acquire_ws_slot` / `release_ws_slot`.
 
-## ADR-007: Hạ tầng thử nghiệm Render + Vercel + Aiven
-- Trạng thái: Chấp nhận (cho bản thử)
-- Dùng Render, Vercel, Aiven cho bản thử nghiệm. Giới hạn dịch vụ thay đổi;
-  kiểm tra trước khi triển khai.
+### ADR-017: Xác thực OTP + Mật khẩu, Chỉ nhận `@sis.hust.edu.vn`, Avatar Thú & Kết bạn 2 Chiều (2026-10-27)
+- **Trạng thái**: Đang áp dụng (Active)
+- **Quyết định**:
+  1. **Email & Mật khẩu**: Chỉ chấp nhận đuôi `@sis.hust.edu.vn` (từ chối `@hust.edu.vn`). Chỉ yêu cầu mã OTP ở bước Đăng ký lần đầu và Quên mật khẩu; đăng nhập hàng ngày dùng Email + Mật khẩu (`PBKDF2-HMAC-SHA256`).
+  2. **Lưu trữ Email có kiểm soát**: Lưu cả `email` (để đăng nhập và hiển thị cho bạn bè sau khi `accepted`) và `email_hash` (để rate-limit/OTP).
+  3. **Cá nhân hóa**: Thay `anon_name` bằng `nickname` và bộ 11 emoji linh vật thú (`DEFAULT_AVATAR = "🦉"`).
+  4. **Mạng xã hội thu nhỏ**: Thêm bảng `friendships` và `direct_messages` để hai người dùng sau khi kết bạn 2 chiều có thể nhắn tin lâu dài tại `/messages` và xem được email thật của nhau.
 
-## ADR-008: Dùng Node.js test runner tích hợp cho frontend
-- Ngày: 2026-10-22 | Trạng thái: Chấp nhận
-- Dùng `node:test`/`node:assert` cho unit test store, tránh dependency test
-  runner; test giao diện cần công cụ DOM/browser riêng nếu phát sinh.
+### ADR-016: Đơn giản hóa Ghép đôi sang 3 Bộ lọc Cứng 2 Chiều & Cascading Dropdown 68 Ngành (2026-10-27 & 2026-10-30)
+- **Trạng thái**: Đang áp dụng (Active)
+- **Quyết định**:
+  1. Loại bỏ bộ câu hỏi tính cách Q1–Q6 và điểm tương đồng cosine; chuyển sang **3 tiêu chí lọc cứng 2 chiều (Mutual Hard Filters)**: Giới tính (`male`/`female`/`any`), Trường-Viện-Ngành (`same_major`/`same_faculty`/`different_faculty`/`any`), và Khóa học `K63`–`K71` (`same_cohort`/`senior`/`junior`/`any`).
+  2. Sử dụng danh mục 68 ngành đào tạo chuẩn HUST 2026 từ `db/seed/hust-68-nganh-2026.csv` (`encoding="utf-8-sig"`). Giao diện Onboarding dùng Cascading Dropdown chọn **Trường/Viện/Khoa (`faculty_code` `VARCHAR(100)`) → Ngành học (`major_code`)**.
 
-## ADR-009: Chỉ phân loại nội dung khi có report, evidence tạm thời
-- Ngày: 2026-10-23 | Trạng thái: Chấp nhận
-- Participant được report người còn lại trong 30 phút sau chat. Redis giữ buffer
-  trượt 30 phút; report hợp lệ snapshot evidence mã hóa vào DB, xóa sau 30 phút.
-  Chưa chọn classifier. Redis TTL không dọn DB evidence; cần job xóa và xử lý
-  lỗi snapshot. Không log nội dung chat.
+### Các ADR Nền tảng Ban đầu Vẫn Giữ Hiệu Lực
+- **ADR-001**: Kiến trúc Monorepo 1-1-1 (`frontend/`, `backend/`, `db/`, `docs/`) dùng chung cho cả môi trường Docker Compose local và Cloud.
+- **ADR-004**: Xác thực bằng JWT lưu trong `HttpOnly` cookie (tránh XSS đọc token).
+- **ADR-010**: Tầng `StoreService` (`store.py`) đóng gói mọi giao tiếp Redis và hỗ trợ fallback in-memory khi phát triển local/chạy unit test.
+- **ADR-011**: Bộ khung giao diện 5 màn hình chính (`Login`, `Onboarding`, `Matching`, `Chat`, `Messages`).
+- **ADR-013**: Hệ thống điểm uy tín `trust_score` (mặc định `100`) giới hạn số lượt ghép đôi mỗi ngày theo múi giờ Việt Nam (`UTC+7`).
 
-## ADR-012: Chốt wildcard, quota chat và xử lý report giai đoạn đầu
-- Ngày: 2026-10-23 | Trạng thái: Thiết kế chấp nhận; mã/quota tại ADR-013,
-  catalog tại ADR-014
-- Một phòng hoạt động/user, không cooldown; mỗi bên nhận một lượt khi phòng
-  tạo thành công. Quota/ngày VN: score `>=90` không giới hạn, `70-89` tối đa
-  5, `50-69` tối đa 3, `1-49` tối đa 1; `<=0` bị ban. Không shadowban.
-- Redis buffer mỗi phòng tối đa 1 MiB, bỏ tin cũ; report hợp lệ lưu snapshot
-  mã hóa 30 phút. Ban đầu chỉ thu thập; placeholder `50` không đổi trust.
-- Rủi ro: buffer/TTL có thể khiến evidence thiếu; cần xử lý lỗi snapshot và
-  dọn evidence khỏi DB.
+---
 
-## ADR-013: Mã đáp án và ưu tiên tính cách; tính quota lúc bắt đầu chat
-- Ngày: 2026-10-23 | Trạng thái: Chấp nhận cho thiết kế
-- Mã chuỗi: Q1/Q3 `0`–`3`, Q2 `0`–`2`, Q4-Q6 `0`–`2` + wildcard `3`;
-  questionnaire version `3`.
-- Personality thay cosine bằng ưu tiên hai chiều: code `0/1` xếp ứng viên
-  `0→1→2→3`; code `2/3` xếp `3→2→1→0`. Tổng là weighted score.
-- Ghi lượt quota cho mỗi bên khi tạo conversation, theo `started_at` và ngày
-  `Asia/Ho_Chi_Minh`.
+## Phần 2: Phụ lục các ADR Lịch sử Đã Được Thay Thế (`[Superseded]`)
 
-## ADR-014: Dùng catalog HUST tuyển sinh 2026 đã lưu trong repository
-- Ngày: 2026-10-23 | Trạng thái: Chấp nhận cho thiết kế
-- CSV [68 chương trình](../db/seed/hust-68-nganh-2026.csv) là nguồn chuẩn;
-  script kiểm tra dữ liệu và tạo CSV đơn vị. Không crawl khi seed.
-- Giữ mã chương trình làm `major_code`; `faculty_code` là slug nội bộ, không
-  phải mã chính thức. Metadata không tham gia matching.
-- Catalog tổng hợp; đối chiếu TROY-IT, ED2/ED3/ED5, MS2, MI-E22 và chỉ tiêu
-  BF-E12 trước production.
+> [!WARNING]
+> Các ADR dưới đây thuộc thiết kế sơ khởi và **KHÔNG CÒN ÁP DỤNG** trong mã nguồn hiện tại:
 
-## ADR-015: Xử lý lỗi snapshot evidence khi report
-- Ngày: 2026-10-23 | Trạng thái: Chấp nhận cho thiết kế
-- Nếu snapshot evidence thất bại (chưa lưu bền vững vào DB), backend không xác
-  nhận report thành công mà trả về lỗi; UI hiển thị thông báo "Gửi report không
-  thành công".
-
-
-## ADR-016: Đơn giản hóa hồ sơ và chuyển toàn bộ sang 3 bộ lọc cứng hai chiều
-- Ngày: 2026-10-27 | Trạng thái: Chấp nhận
-- Xóa bỏ toàn bộ các câu hỏi tính cách, mục tiêu, vector cosine cũ.
-- Khi đăng nhập: bắt buộc khai báo 3 thông tin: `gender` (nam/nữ), `major_code`/`faculty_code` (thuộc 68 ngành HUST), `cohort` (khóa K63 đến K71).
-- Khi ghép cặp: chỉ áp dụng 3 ràng buộc hai chiều (Two-way Hard Filters):
-  1. Giới tính: nam / nữ / bất kì
-  2. Ngành/Trường: cùng ngành / cùng trường khác ngành / khác trường / bất kì
-  3. Khóa: khóa trên / khóa dưới / cùng khóa / bất kì
-- Cả hai người phải cùng thỏa mãn ràng buộc của nhau. Chi tiết tại `docs/SYSTEM_FLOWS.md`.
-
-
-## ADR-017: Authentication with Password, Strict SIS Email, Two-way Friend System & Persistent DMs
-- Date: 2026-10-27 | Status: Accepted
-- **Email domain restriction**: Only `@sis.hust.edu.vn` allowed (removed `@hust.edu.vn`).
-- **Account Registration & Login**:
-  - Sign Up: Email $\to$ OTP verification $\to$ Password creation (PBKDF2-HMAC-SHA256 with 100,000 iterations). Auto-login upon registration.
-  - Sign In: Email + Password authentication.
-  - Password Reset: Email $\to$ OTP $\to$ New password.
-- **Identity & UI**: User-selectable custom nicknames and avatar emojis (🦉, 🐱, 🐸, 🐶, 🐵, 🐰, 🐻, 🐧, 🐹, 🦊, 🐼). Entire UI localized in English.
-- **Anonymous Chat & Friend System**:
-  - Chat displays opponent's avatar and nickname, with real email hidden.
-  - Two-way "Add Friend" action: User A clicks "Add Friend", User B receives accept/decline prompt. On acceptance, both real emails are revealed in chat and recorded in `friendships` table.
-- **Messages Tab**:
-  - 2-column layout: Left column lists friends; right column displays persistent direct messages stored in `direct_messages` table with real-time WebSocket updates.
-
-
-## ADR-018: Clean Architecture Refactoring, Tách Constants vs Config, Bỏ Auth Legacy
-- Ngày: 2026-10-28 | Trạng thái: Chấp nhận
-- Tách rõ ràng ranh giới giữa Constants (hằng số nghiệp vụ cố định) và Config (cấu hình môi trường).
-- Bí mật (Gmail App Password, OTP secret, JWT secret) chỉ được đọc từ .env / ackend/.env, không hardcode mặc định trong config.py.
-- Tách tầng Schemas (pp/schemas/) cho DTOs request/response; tách tầng Services (AuthService, EmailService) để rút gọn Routers thành tầng mỏng (Thin Controller).
-- Loại bỏ hoàn toàn 2 endpoint legacy /request-otp và /verify-otp để chuẩn hóa 1 luồng tài khoản duy nhất. Dùng email trực tiếp thay vì băm email trước DB.
-
-
-## ADR-019: Fail-fast secrets, consent-based friendship và giới hạn matching
-- Ngày: 2026-10-28 | Trạng thái: Chấp nhận
-- Production không dùng giá trị secret cố định trong source; `OTP_SECRET`,
-  `EMAIL_HASH_SECRET`, `JWT_SECRET`, `DATABASE_URL` và `REDIS_URL` phải được
-  khai báo. Dev sinh secret tạm thời riêng cho mỗi process nếu thiếu.
-- Friendship phải có lời mời `pending` với `requested_by`; chỉ người nhận lời
-  mời hiện hành được accept/decline. Chỉ khi accept mới đổi sang `accepted` và
-  tiết lộ email.
-- Login giới hạn 10 lần thử cho mỗi HMAC email trong 15 phút; không khóa tài
-  khoản dài hạn để giảm nguy cơ DoS.
-- Quota matching theo trust score/ngày Việt Nam: `>=90` không giới hạn,
-  `70-89` tối đa 5, `50-69` tối đa 3, `1-49` tối đa 1, `<=0` không được match.
-  Mỗi user chỉ có một conversation đang hoạt động.
-- Cookie WebSocket chỉ chấp nhận Origin thuộc allowlist cấu hình; đây là kiểm
-  tra độc lập với CORS.
-
-
-## ADR-020: Redis Outage Fail-Fast, Session Revocation, and WebSocket Rate Limits
-- Ngày: 2026-10-28 | Trạng thái: Chấp nhận
-- **Redis Outage Handling**:
-  - Ở production (`ENVIRONMENT=production`), khi Redis gặp sự cố hoặc mất kết nối, hệ thống không tự ý fallback về in-memory (vì mô hình cluster/đa worker trên Render sẽ gây phân mảnh state, mất tin nhắn Pub/Sub và hỏng hàng đợi matching). Thay vào đó, hệ thống fail-fast trả về **HTTP 503 Service Unavailable** (`RedisUnavailable`).
-  - Ở dev/test (`ENVIRONMENT!=production`), hệ thống tiếp tục hỗ trợ in-memory fallback mượt mà cho phát triển offline.
-- **Session Revocation (Thu hồi phiên JWT)**:
-  - Token JWT phát hành đều kèm claim `jti` duy nhất.
-  - Khi người dùng đăng xuất (`POST /auth/logout`): xóa session tương ứng khỏi Redis (`revoke_session`).
-  - Khi người dùng đổi mật khẩu (`POST /auth/reset-password`): thu hồi toàn bộ phiên đang hoạt động của tài khoản (`revoke_user_sessions`) trước khi cấp token mới.
-  - Middleware `get_current_user` và WebSocket handshake kiểm tra `is_session_active(user_id, jti)`. Nếu phiên đã bị thu hồi, từ chối với HTTP 401 hoặc đóng kết nối WebSocket với code `1008`.
-  - Quy định về Ban: Trạng thái Banned khóa quyền tham gia ghép cặp (`/match/join`), không thu hồi JWT đăng nhập để người dùng vẫn có thể xem thông tin cá nhân.
-- **WebSocket Connection Limits (Giới hạn kết nối đồng thời)**:
-  - Tối đa 3 kết nối WebSocket đồng thời / tài khoản (`MAX_WS_CONNECTIONS_PER_USER = 3`).
-  - Tối đa 10 kết nối WebSocket đồng thời / IP (`MAX_WS_CONNECTIONS_PER_IP = 10`).
-  - Được quản lý nguyên tử bằng Lua script trên Redis kèm TTL 24h tự dọn dẹp, giải phóng tức thì khi socket đóng (`finally`). Vượt quá giới hạn sẽ bị đóng với mã `WS_1008_POLICY_VIOLATION`.
-
-## ADR-021: Localize HUST Catalog to English, Cascading Major Selection, and Column Length Expansion
-- Ngày: 2026-10-30 | Trạng thái: Chấp nhận
-- **Tiếng Anh hóa Catalog & Giao diện**:
-  - Dịch toàn bộ danh mục 68 ngành đào tạo và 10 Trường/Viện/Khoa HUST sang tiếng Anh chính thức trong các file CSV seed (`hust-68-nganh-2026.csv`, `hust-schools-2026.csv`).
-  - Giao diện Onboarding và Matching chuyển hoàn toàn sang tiếng Anh.
-- **Cascading Onboarding Selection**:
-  - Chuyển giao diện chọn ngành từ ô input tìm kiếm sang bộ chọn 2 bước phân cấp: Chọn School/Faculty/Institute trước -> Chọn Academic Major thuộc đơn vị đó.
-  - Cung cấp module catalog tĩnh (`frontend/src/lib/hustCatalog.js`) làm fallback dự phòng tức thì cho frontend.
-- **Mở rộng cột `faculty_code`**:
-  - Do mã định danh slug tiếng Anh của các trường dài hơn 20 ký tự (ví dụ `school-of-information-and-communication-technology-soict` dài 47 ký tự), mở rộng cột `faculty_code` trong bảng `profiles` lên `VARCHAR(100)` qua Alembic migration `0004_expand_faculty_code`.
+| Mã ADR | Nội dung cũ ban đầu | Đã bị thay thế bởi |
+| :--- | :--- | :--- |
+| **ADR-002** | Ghép đôi bằng vector trọng số 6 câu hỏi tính cách (Q1–Q6) và ngưỡng điểm `0.70` / `0.55`. | **ADR-016** (3 bộ lọc cứng 2 chiều). |
+| **ADR-003** | Tự động đẩy vào phòng chat với AI Bot Gemini sau 60s không tìm thấy người. | **ADR-019** (Trả `not_found` sau 60s; AI Bot dời sang Backlog Sprint 3). |
+| **ADR-005** | Ma trận phạt điểm `trust_score` tự động theo số lượng `reports`. | Dời sang Backlog Sprint 2 (`docs/PLAN.md`). |
+| **ADR-006** | Chuẩn hóa mã lỗi API theo envelope `{error: {code, message}}`. | Dùng chuẩn `HTTPException(detail=...)` mặc định của FastAPI. |
+| **ADR-007** | Schema 7 bảng (có bảng `faculties`, `majors`, `reports`, `blocks` và không lưu cột `email`). | **ADR-016 & ADR-017** (5 bảng MVP + đọc ngành từ CSV). |
+| **ADR-008, 009, 012, 015** | Chỉ giữ bộ đệm 10 tin nhắn gần nhất để phục vụ tính năng tố cáo (`report`). | **ADR-021** (Lưu lịch sử phòng ẩn danh 24h trên Redis để F5/reconnect + lưu DM vào MySQL). |
+| **ADR-014** | Giữ khung route rỗng cho `report`, `block`, `admin` trong Sprint 1. | Đã dọn sạch, chỉ giữ các route thực sự hoạt động trong MVP. |

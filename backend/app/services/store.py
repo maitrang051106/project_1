@@ -42,8 +42,10 @@ class StoreService:
 
     def __init__(self) -> None:
         self._redis = None
-        self._redis_lock = asyncio.Lock()
-        self._memory_lock = asyncio.Lock()
+        self._redis_lock_obj: asyncio.Lock | None = None
+        self._redis_lock_loop: asyncio.AbstractEventLoop | None = None
+        self._memory_lock_obj: asyncio.Lock | None = None
+        self._memory_lock_loop: asyncio.AbstractEventLoop | None = None
 
         # In-memory fallbacks for local dev / testing
         self._in_memory_kv: dict[str, tuple[Any, float]] = {}
@@ -56,6 +58,30 @@ class StoreService:
         self._pubsub_tasks: dict[str, asyncio.Task] = {}
         self._in_memory_user_ws: dict[int, int] = {}
         self._in_memory_ip_ws: dict[str, int] = {}
+
+    @property
+    def _redis_lock(self) -> asyncio.Lock:
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if self._redis_lock_obj is None or (current_loop is not None and self._redis_lock_loop != current_loop):
+            self._redis_lock_obj = asyncio.Lock()
+            self._redis_lock_loop = current_loop
+        return self._redis_lock_obj
+
+    @property
+    def _memory_lock(self) -> asyncio.Lock:
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if self._memory_lock_obj is None or (current_loop is not None and self._memory_lock_loop != current_loop):
+            self._memory_lock_obj = asyncio.Lock()
+            self._memory_lock_loop = current_loop
+        return self._memory_lock_obj
 
     def _handle_redis_failure(self, error: Exception) -> None:
         self._redis = None
@@ -347,6 +373,8 @@ class StoreService:
             except Exception as exc:
                 self._handle_redis_failure(exc)
 
+        self._ensure_redis_in_production(r)
+
         async with self._memory_lock:
             if user_id in self._in_memory_user_ws:
                 self._in_memory_user_ws[user_id] = max(0, self._in_memory_user_ws[user_id] - 1)
@@ -507,6 +535,8 @@ class StoreService:
             except Exception as exc:
                 self._handle_redis_failure(exc)
 
+        self._ensure_redis_in_production(r)
+
         async with self._memory_lock:
             self._in_memory_queue[user_id] = record
 
@@ -518,6 +548,8 @@ class StoreService:
                 await r.delete(f"hust:v1:match:queue:entry:{user_id}")
             except Exception as exc:
                 self._handle_redis_failure(exc)
+
+        self._ensure_redis_in_production(r)
 
         async with self._memory_lock:
             self._in_memory_queue.pop(user_id, None)
@@ -553,6 +585,8 @@ class StoreService:
                 return candidates
             except Exception as exc:
                 self._handle_redis_failure(exc)
+
+        self._ensure_redis_in_production(r)
 
         async with self._memory_lock:
             stale = [
@@ -592,6 +626,8 @@ class StoreService:
             except Exception as exc:
                 self._handle_redis_failure(exc)
 
+        self._ensure_redis_in_production(r)
+
         async with self._memory_lock:
             if candidate_user_id in self._in_memory_queue:
                 self._in_memory_queue.pop(candidate_user_id)
@@ -614,6 +650,8 @@ class StoreService:
             except Exception as exc:
                 self._handle_redis_failure(exc)
 
+        self._ensure_redis_in_production(r)
+
         async with self._memory_lock:
             self._in_memory_queue[user_id] = record
 
@@ -626,8 +664,11 @@ class StoreService:
                 raw = await r.get(entry_key)
                 if raw:
                     return json.loads(raw)
+                return None
             except Exception as exc:
                 self._handle_redis_failure(exc)
+
+        self._ensure_redis_in_production(r)
 
         async with self._memory_lock:
             return self._in_memory_queue.get(user_id)
@@ -675,6 +716,8 @@ class StoreService:
             except Exception as exc:
                 self._handle_redis_failure(exc)
 
+        self._ensure_redis_in_production(r)
+
         async with self._memory_lock:
             self._in_memory_matches[user_a_id] = res_a
             self._in_memory_matches[user_b_id] = res_b
@@ -686,8 +729,11 @@ class StoreService:
                 raw = await r.get(f"hust:v1:match:result:{user_id}")
                 if raw:
                     return json.loads(raw)
+                return None
             except Exception as exc:
                 self._handle_redis_failure(exc)
+
+        self._ensure_redis_in_production(r)
 
         async with self._memory_lock:
             match = self._in_memory_matches.get(user_id)
@@ -714,6 +760,8 @@ class StoreService:
             except Exception as exc:
                 self._handle_redis_failure(exc)
 
+        self._ensure_redis_in_production(r)
+
         async with self._memory_lock:
             self._in_memory_not_found[user_id] = record
 
@@ -724,8 +772,11 @@ class StoreService:
                 raw = await r.get(f"hust:v1:match:terminal:{user_id}")
                 if raw:
                     return json.loads(raw)
-            except Exception:
-                pass
+                return None
+            except Exception as exc:
+                self._handle_redis_failure(exc)
+
+        self._ensure_redis_in_production(r)
 
         async with self._memory_lock:
             res = self._in_memory_not_found.get(user_id)
@@ -742,8 +793,10 @@ class StoreService:
                     f"hust:v1:match:result:{user_id}",
                     f"hust:v1:match:terminal:{user_id}",
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                self._handle_redis_failure(exc)
+
+        self._ensure_redis_in_production(r)
 
         async with self._memory_lock:
             self._in_memory_matches.pop(user_id, None)
@@ -753,7 +806,10 @@ class StoreService:
     # REALTIME ROOM BROADCAST (Redis Pub/Sub with local in-memory fallback)
     # --------------------------------------------------------------------------
     def _room_channel(self, room_id: int | str) -> str:
-        return f"hust:v1:chat:room:{room_id}"
+        room_str = str(room_id)
+        if room_str.startswith("dm_"):
+            return f"hust:v1:channel:dm:{room_str[3:]}"
+        return f"hust:v1:channel:match:{room_str}"
 
     async def subscribe_room(self, room_id: int | str) -> asyncio.Queue:
         """Subscribe client WebSocket to room broadcast channel."""
@@ -800,15 +856,31 @@ class StoreService:
         return q
 
     async def unsubscribe_room(self, room_id: int | str, q: asyncio.Queue) -> None:
+        """Remove a single connection's queue from the room listener set.
+
+        The Redis pub/sub task is intentionally kept alive so that users who
+        reconnect after a network drop or page refresh can re-subscribe without
+        losing the channel.  The task is only cancelled via cancel_room_pubsub()
+        which is called when the conversation is explicitly ended.
+        """
         room_str = str(room_id)
         async with self._memory_lock:
             if room_str in self._rooms:
                 self._rooms[room_str].discard(q)
-                if not self._rooms[room_str]:
-                    self._rooms.pop(room_str, None)
-                    task = self._pubsub_tasks.pop(room_str, None)
-                    if task:
-                        task.cancel()
+                # Do NOT cancel the pubsub task here - keep it alive for reconnects.
+
+    async def cancel_room_pubsub(self, room_id: int | str) -> None:
+        """Tear down the pub/sub channel for a room that has been ended.
+
+        Called from end_conversation() once the room is permanently closed so
+        that the Redis subscriber and the in-memory listener registry are freed.
+        """
+        room_str = str(room_id)
+        async with self._memory_lock:
+            self._rooms.pop(room_str, None)
+            task = self._pubsub_tasks.pop(room_str, None)
+            if task:
+                task.cancel()
 
     async def broadcast_to_room(self, room_id: int | str, message: dict) -> None:
         """Broadcast message to all subscribers across instances via Redis Pub/Sub."""
@@ -820,14 +892,83 @@ class StoreService:
                 channel = self._room_channel(room_str)
                 await r.publish(channel, json.dumps(message))
                 return
-            except Exception:
-                pass
+            except Exception as exc:
+                self._handle_redis_failure(exc)
+
+        self._ensure_redis_in_production(r)
 
         # Fallback to local in-memory subscribers
         async with self._memory_lock:
             queues = self._rooms.get(room_str, set()).copy()
         for q in queues:
             await q.put(message)
+
+    # --------------------------------------------------------------------------
+    # CHAT HISTORY STORAGE (Redis List with 24h TTL, in-memory fallback)
+    # --------------------------------------------------------------------------
+    async def append_chat_message(self, room_id: int | str, msg: dict) -> None:
+        """Persist a chat message to the room's Redis history list (TTL 24h)."""
+        key = f"hust:v1:chat:history:{room_id}"
+        r = await self.get_redis()
+        if r:
+            try:
+                await r.rpush(key, json.dumps(msg))
+                await r.expire(key, 86400)
+                return
+            except Exception as exc:
+                self._handle_redis_failure(exc)
+
+        self._ensure_redis_in_production(r)
+
+        # In-memory fallback
+        async with self._memory_lock:
+            entry = self._in_memory_kv.get(key)
+            if entry is None or not isinstance(entry[0], list):
+                self._in_memory_kv[key] = ([], time.time() + 86400)
+            self._in_memory_kv[key][0].append(msg)
+
+    async def get_chat_history(self, room_id: int | str) -> list[dict]:
+        """Retrieve full message history for a room from Redis or in-memory."""
+        key = f"hust:v1:chat:history:{room_id}"
+        r = await self.get_redis()
+        if r:
+            try:
+                raw_list = await r.lrange(key, 0, -1)
+                return [json.loads(item) for item in raw_list]
+            except Exception as exc:
+                self._handle_redis_failure(exc)
+
+        self._ensure_redis_in_production(r)
+
+        async with self._memory_lock:
+            entry = self._in_memory_kv.get(key)
+            if entry and isinstance(entry[0], list) and entry[1] > time.time():
+                return list(entry[0])
+            return []
+
+    async def get_chat_history_paginated(
+        self,
+        room_id: int | str,
+        limit: int = 20,
+        before_timestamp: float | None = None,
+    ) -> dict[str, Any]:
+        """Retrieve paginated chat history for a room from Redis or in-memory.
+        Messages are ordered chronologically. Returns {'messages': [...], 'has_more': bool}.
+        """
+        all_msgs = await self.get_chat_history(room_id)
+        if before_timestamp is not None:
+            filtered = [m for m in all_msgs if m.get("timestamp", 0) < before_timestamp]
+        else:
+            filtered = all_msgs
+
+        if len(filtered) > limit:
+            paged = filtered[-limit:]
+            has_more = True
+        else:
+            paged = filtered
+            has_more = False
+
+        return {"messages": paged, "has_more": has_more}
 
 
 store_service = StoreService()

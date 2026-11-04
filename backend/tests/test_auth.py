@@ -1,5 +1,5 @@
 from datetime import timedelta
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import anyio
 import pytest
@@ -159,7 +159,6 @@ def test_build_otp_email_message() -> None:
 
 
 def test_get_current_user_validates_active_session(monkeypatch) -> None:
-    from unittest.mock import MagicMock
     from app.api.deps import get_current_user
     from app.models.enums import UserRole, UserStatus
     from app.models.user import User
@@ -267,6 +266,53 @@ def test_ws_connection_slots_limit_and_release() -> None:
         ok, ip_reason = await store.acquire_ws_slot(user_id=110, client_ip=ip, max_user=3, max_ip=10)
         assert ok is False
         assert "Maximum 10 concurrent WebSocket connections reached for this IP" in ip_reason
+
+    anyio.run(scenario)
+
+
+def test_direct_ws_rejection_does_not_leak_ws_slot(monkeypatch) -> None:
+    """Verify that when direct_message_websocket rejects a non-friend, no WS slot is consumed."""
+    from app.api.direct_messages import direct_message_websocket
+    from app.services.store import store_service
+
+    async def scenario() -> None:
+        async def memory_only_redis():
+            return None
+
+        monkeypatch.setattr(store_service, "get_redis", memory_only_redis)
+
+        user_id = 501
+        friend_id = 502
+        token = create_access_token({"sub": str(user_id)})
+        claims = decode_access_token(token)
+        await store_service.create_session(user_id, claims["jti"], ttl=60)
+
+        # Mock DB session returning None for Friendship check (not friends)
+        mock_db = AsyncMock()
+        mock_res = MagicMock()
+        mock_res.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = mock_res
+
+        class FakeSessionContext:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        monkeypatch.setattr("app.api.direct_messages.SessionLocal", lambda: FakeSessionContext())
+
+        ws = AsyncMock()
+        ws.headers = {"origin": "http://localhost:5173"}
+        ws.cookies = {"access_token": token}
+        ws.client = MagicMock(host="127.0.0.1")
+
+        # Attempt 5 rejected connections to /ws/direct/{friend_id}
+        for _ in range(5):
+            await direct_message_websocket(ws, friend_id=friend_id, token=None)
+
+        # User must still have 0 slots consumed in store_service
+        assert store_service._in_memory_user_ws.get(user_id, 0) == 0
 
     anyio.run(scenario)
 
