@@ -320,6 +320,7 @@ def test_direct_ws_rejection_does_not_leak_ws_slot(monkeypatch) -> None:
 def test_redis_outage_raises_503_in_production(monkeypatch) -> None:
     from fastapi.testclient import TestClient
     from app.main import app
+    from app.core.db import get_db
     from app.services.store import store_service
 
     monkeypatch.setattr(settings, "environment", "production")
@@ -327,8 +328,15 @@ def test_redis_outage_raises_503_in_production(monkeypatch) -> None:
         return None
     monkeypatch.setattr(store_service, "get_redis", broken_redis)
 
-    client = TestClient(app, raise_server_exceptions=False)
-    # Rate limit check or session verification calls _ensure_redis_in_production in production mode
-    res = client.post("/api/auth/request-register-otp", json={"email": "student@sis.hust.edu.vn"})
-    assert res.status_code == 503
-    assert "temporarily unavailable" in res.json()["detail"].lower()
+    async def mock_get_db():
+        yield AsyncMock()
+
+    app.dependency_overrides[get_db] = mock_get_db
+    try:
+        client = TestClient(app, raise_server_exceptions=False)
+        # Rate limit check or session verification calls _ensure_redis_in_production in production mode
+        res = client.post("/api/auth/request-register-otp", json={"email": "student@sis.hust.edu.vn"})
+        assert res.status_code == 503
+        assert "temporarily unavailable" in res.json()["detail"].lower()
+    finally:
+        app.dependency_overrides.pop(get_db, None)

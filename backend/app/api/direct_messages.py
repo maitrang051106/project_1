@@ -58,7 +58,7 @@ async def get_friends(
             partner_id_expr,
             func.row_number().over(
                 partition_by=partner_id_expr,
-                order_by=DirectMessage.created_at.desc(),
+                order_by=(DirectMessage.created_at.desc(), DirectMessage.id.desc()),
             ).label("rn"),
         )
         .where(or_(DirectMessage.sender_id == user.id, DirectMessage.receiver_id == user.id))

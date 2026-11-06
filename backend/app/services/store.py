@@ -687,14 +687,14 @@ class StoreService:
         res_a = {
             "status": "matched",
             "room_id": room_id,
-            "partner": partner_b_info,
+            "partner": partner_a_info,
             "attempt_id": attempt_a_id,
             "matched_at": now,
         }
         res_b = {
             "status": "matched",
             "room_id": room_id,
-            "partner": partner_a_info,
+            "partner": partner_b_info,
             "attempt_id": attempt_b_id,
             "matched_at": now,
         }
