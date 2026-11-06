@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -32,7 +31,6 @@ class DirectMessage(Base):
         nullable=False,
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.current_timestamp()
     )

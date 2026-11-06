@@ -56,6 +56,7 @@ class StoreService:
         self._in_memory_not_found: dict[int, dict[str, Any]] = {}
         self._rooms: dict[str, set[asyncio.Queue]] = {}
         self._pubsub_tasks: dict[str, asyncio.Task] = {}
+        self._cleanup_tasks: dict[str, asyncio.Task] = {}
         self._in_memory_user_ws: dict[int, int] = {}
         self._in_memory_ip_ws: dict[str, int] = {}
 
@@ -115,7 +116,11 @@ class StoreService:
             logger.info("Redis unavailable (%s), using in-memory store for development.", type(e).__name__)
 
     async def close_redis(self) -> None:
-        """Close Redis connection and active Pub/Sub tasks during shutdown."""
+        """Close Redis connection, cleanup timers, and active Pub/Sub tasks during shutdown."""
+        for task in self._cleanup_tasks.values():
+            task.cancel()
+        self._cleanup_tasks.clear()
+
         for task in self._pubsub_tasks.values():
             task.cancel()
         self._pubsub_tasks.clear()
@@ -817,6 +822,11 @@ class StoreService:
         room_str = str(room_id)
 
         async with self._memory_lock:
+            # If an automated cleanup timer was pending for this room, cancel it
+            cleanup_task = self._cleanup_tasks.pop(room_str, None)
+            if cleanup_task and not cleanup_task.done():
+                cleanup_task.cancel()
+
             if room_str not in self._rooms:
                 self._rooms[room_str] = set()
             self._rooms[room_str].add(q)
@@ -858,26 +868,37 @@ class StoreService:
     async def unsubscribe_room(self, room_id: int | str, q: asyncio.Queue) -> None:
         """Remove a single connection's queue from the room listener set.
 
-        The Redis pub/sub task is intentionally kept alive so that users who
-        reconnect after a network drop or page refresh can re-subscribe without
-        losing the channel.  The task is only cancelled via cancel_room_pubsub()
-        which is called when the conversation is explicitly ended.
+        If the room listener set becomes empty, schedule an automated cleanup timer
+        (3 minutes = 180 seconds). If no clients reconnect within this window,
+        the Pub/Sub task and room resources are cleanly torn down.
         """
         room_str = str(room_id)
         async with self._memory_lock:
             if room_str in self._rooms:
                 self._rooms[room_str].discard(q)
-                # Do NOT cancel the pubsub task here - keep it alive for reconnects.
+                if len(self._rooms[room_str]) == 0:
+                    # Cancel any existing cleanup timer for this room
+                    existing_cleanup = self._cleanup_tasks.pop(room_str, None)
+                    if existing_cleanup and not existing_cleanup.done():
+                        existing_cleanup.cancel()
+
+                    async def _delayed_cleanup(r_key: str) -> None:
+                        try:
+                            await asyncio.sleep(180)  # 3 minutes
+                            await self.cancel_room_pubsub(r_key)
+                        except asyncio.CancelledError:
+                            pass
+
+                    self._cleanup_tasks[room_str] = asyncio.create_task(_delayed_cleanup(room_str))
 
     async def cancel_room_pubsub(self, room_id: int | str) -> None:
-        """Tear down the pub/sub channel for a room that has been ended.
-
-        Called from end_conversation() once the room is permanently closed so
-        that the Redis subscriber and the in-memory listener registry are freed.
-        """
+        """Tear down the pub/sub channel for a room that has been ended or timed out."""
         room_str = str(room_id)
         async with self._memory_lock:
             self._rooms.pop(room_str, None)
+            cleanup_task = self._cleanup_tasks.pop(room_str, None)
+            if cleanup_task and not cleanup_task.done():
+                cleanup_task.cancel()
             task = self._pubsub_tasks.pop(room_str, None)
             if task:
                 task.cancel()

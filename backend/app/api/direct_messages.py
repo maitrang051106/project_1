@@ -1,6 +1,8 @@
 import asyncio
+from collections import deque
 import json
 import logging
+import time
 from typing import Any
 
 from fastapi import (
@@ -31,6 +33,9 @@ from app.models.user import User
 from app.services.store import store_service
 
 logger = logging.getLogger(__name__)
+
+WS_RATE_LIMIT_MESSAGES = 5
+WS_RATE_LIMIT_WINDOW_SECONDS = 3.0
 
 router = APIRouter(tags=["direct_messages"])
 
@@ -176,7 +181,6 @@ async def get_messages(
                 "sender_id": m.sender_id,
                 "receiver_id": m.receiver_id,
                 "content": m.content,
-                "is_read": m.is_read,
                 "created_at": m.created_at.isoformat(),
             }
             for m in paged_messages
@@ -272,6 +276,7 @@ async def direct_message_websocket(
             pass
 
     send_task = asyncio.create_task(send_messages_to_client())
+    message_timestamps: deque[float] = deque()
 
     try:
         while True:
@@ -279,6 +284,21 @@ async def direct_message_websocket(
             stripped = raw_text.strip()
             if not stripped:
                 continue
+
+            now = time.time()
+            while message_timestamps and message_timestamps[0] <= now - WS_RATE_LIMIT_WINDOW_SECONDS:
+                message_timestamps.popleft()
+
+            if len(message_timestamps) >= WS_RATE_LIMIT_MESSAGES:
+                await websocket.send_text(
+                    json.dumps({
+                        "type": "error",
+                        "message": "You are sending messages too quickly. Please wait a moment.",
+                    })
+                )
+                continue
+
+            message_timestamps.append(now)
 
             content = stripped[:MAX_DIRECT_MESSAGE_LENGTH]
             async with SessionLocal() as db:

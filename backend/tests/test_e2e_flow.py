@@ -392,11 +392,22 @@ def test_e2e_two_users_full_journey(monkeypatch) -> None:
                 assert msg2_a["sender_id"] == user_b_id
                 assert msg2_b["content"] == "Chào tiền bối, em học IT2 K69 ạ!"
 
-                # Verify 24h ephemeral history endpoint contains the 2 messages
+                # Sliding Window Rate Limiting test: user A sends 4 more messages (hitting 5 total: 1 initial + 4)
+                for i in range(4):
+                    ws_a.send_json({"type": "message", "content": f"Quick test {i}"})
+                    _receive_until_type(ws_a, "message")
+                    _receive_until_type(ws_b, "message")
+
+                # 6th message within 3s must receive error frame and NOT drop connection
+                ws_a.send_json({"type": "message", "content": "6th message exceed limit"})
+                err_frame = _receive_until_type(ws_a, "error")
+                assert "too quickly" in err_frame["message"].lower()
+
+                # Verify 24h ephemeral history endpoint contains the valid messages (1 initial A + 1 initial B + 4 quick A = 6)
                 hist_room1 = client.get(
                     f"/api/conversations/{room1_id}/history", headers=headers_a
                 ).json()
-                assert len(hist_room1["messages"]) == 2
+                assert len(hist_room1["messages"]) == 6
 
                 # User A ends the chat via REST -> both WS clients receive `ended`
                 res_end1 = client.post(
@@ -562,6 +573,7 @@ def test_e2e_two_users_full_journey(monkeypatch) -> None:
             # Verify persistent Direct Message history via REST
             dm_hist_a = client.get(f"/api/messages/{user_b_id}", headers=headers_a).json()["messages"]
             assert len(dm_hist_a) == 2
+            assert "is_read" not in dm_hist_a[0]
             assert dm_hist_a[0]["content"] == "Chào Lan, mình chuyển qua Direct Message rồi nhé!"
             assert dm_hist_a[1]["content"] == "Ok Minh, nhắn bên này không lo hết hạn 24h nữa!"
 
@@ -573,6 +585,23 @@ def test_e2e_two_users_full_journey(monkeypatch) -> None:
             # Verify all WebSocket slots were cleanly released after closing connections
             assert isolated_store._in_memory_user_ws.get(user_a_id, 0) == 0
             assert isolated_store._in_memory_user_ws.get(user_b_id, 0) == 0
+
+            # Verify automated 3-minute cleanup timer was scheduled for the empty DM room
+            dm_room_key = f"dm_{user_a_id}_{user_b_id}"
+            assert dm_room_key in isolated_store._cleanup_tasks
+            cleanup_task = isolated_store._cleanup_tasks[dm_room_key]
+            assert not cleanup_task.done()
+
+            # When a user re-subscribes, the pending cleanup timer must be cancelled immediately
+            with client.websocket_connect(f"/api/ws/direct/{user_b_id}", headers=ws_headers_a):
+                assert dm_room_key not in isolated_store._cleanup_tasks
+
+            # =========================================================================
+            # STEP 7: HỆ THỐNG GIÁM SÁT (HEALTH & LIVE PROBES)
+            # =========================================================================
+            res_live = client.get("/live")
+            assert res_live.status_code == 200
+            assert res_live.json() == {"status": "live"}
 
             # Both users log out
             res_logout_a = client.post("/api/auth/logout", headers=headers_a)

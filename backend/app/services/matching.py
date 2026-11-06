@@ -110,39 +110,39 @@ def is_mutual_match(
     if user_a.user_id == user_b.user_id:
         return False
 
-    # Check A -> B
-    a_satisfies_b_gender = check_gender_match(pref_a.target_gender, user_b.gender)
-    a_satisfies_b_major = check_major_faculty_match(
+    # Check A -> B (Does B satisfy A's preferences?)
+    b_satisfies_a_gender = check_gender_match(pref_a.target_gender, user_b.gender)
+    b_satisfies_a_major = check_major_faculty_match(
         pref_a.target_major_faculty,
         user_a.faculty_code,
         user_a.major_code,
         user_b.faculty_code,
         user_b.major_code,
     )
-    a_satisfies_b_cohort = check_cohort_match(
+    b_satisfies_a_cohort = check_cohort_match(
         pref_a.target_cohort,
         user_a.cohort,
         user_b.cohort,
     )
-    a_accepts_b = a_satisfies_b_gender and a_satisfies_b_major and a_satisfies_b_cohort
+    a_accepts_b = b_satisfies_a_gender and b_satisfies_a_major and b_satisfies_a_cohort
 
     if not a_accepts_b:
         return False
 
-    # Check B -> A
-    b_satisfies_a_gender = check_gender_match(pref_b.target_gender, user_a.gender)
-    b_satisfies_a_major = check_major_faculty_match(
+    # Check B -> A (Does A satisfy B's preferences?)
+    a_satisfies_b_gender = check_gender_match(pref_b.target_gender, user_a.gender)
+    a_satisfies_b_major = check_major_faculty_match(
         pref_b.target_major_faculty,
         user_b.faculty_code,
         user_b.major_code,
         user_a.faculty_code,
         user_a.major_code,
     )
-    b_satisfies_a_cohort = check_cohort_match(
+    a_satisfies_b_cohort = check_cohort_match(
         pref_b.target_cohort,
         user_b.cohort,
         user_a.cohort,
     )
-    b_accepts_a = b_satisfies_a_gender and b_satisfies_a_major and b_satisfies_a_cohort
+    b_accepts_a = a_satisfies_b_gender and a_satisfies_b_major and a_satisfies_b_cohort
 
     return b_accepts_a

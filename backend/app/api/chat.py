@@ -1,4 +1,5 @@
 import asyncio
+from collections import deque
 import json
 import logging
 import time
@@ -34,6 +35,9 @@ from app.models.user import User
 from app.services.store import store_service
 
 logger = logging.getLogger(__name__)
+
+WS_RATE_LIMIT_MESSAGES = 5
+WS_RATE_LIMIT_WINDOW_SECONDS = 3.0
 
 router = APIRouter(tags=["chat"])
 
@@ -362,6 +366,7 @@ async def chat_websocket(
             pass
 
     send_task = asyncio.create_task(send_messages_to_client())
+    message_timestamps: deque[float] = deque()
 
     try:
         while True:
@@ -417,6 +422,21 @@ async def chat_websocket(
 
             if not content.strip():
                 continue
+
+            now = time.time()
+            while message_timestamps and message_timestamps[0] <= now - WS_RATE_LIMIT_WINDOW_SECONDS:
+                message_timestamps.popleft()
+
+            if len(message_timestamps) >= WS_RATE_LIMIT_MESSAGES:
+                await websocket.send_text(
+                    json.dumps({
+                        "type": "error",
+                        "message": "You are sending messages too quickly. Please wait a moment.",
+                    })
+                )
+                continue
+
+            message_timestamps.append(now)
 
             msg = {
                 "type": "message",
